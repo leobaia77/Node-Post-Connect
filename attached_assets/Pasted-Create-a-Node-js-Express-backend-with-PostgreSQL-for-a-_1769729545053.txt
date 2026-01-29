@@ -1,0 +1,187 @@
+Create a Node.js Express backend with PostgreSQL for a teen health tracking app with parent oversight.
+
+DATABASE SCHEMA:
+1. users table:
+   - id (uuid, primary key)
+   - email, password_hash
+   - role (enum: 'teen', 'parent', 'admin')
+   - created_at, updated_at
+
+2. profiles table:
+   - id (uuid, primary key)
+   - user_id (foreign key to users)
+   - display_name
+   - age_range (enum: '13-14', '15-16', '17-19')
+   - timezone
+   
+3. teen_profiles table:
+   - id (uuid, primary key)
+   - profile_id (foreign key)
+   - goals (jsonb array: 'growth', 'muscle', 'bone_health', 'scoliosis_support', 'athletic_performance')
+   - goal_weights (jsonb object with priority 1-5 for each goal)
+   - sports (jsonb array of sport objects with name, level, season_start, season_end)
+   - weekly_availability (jsonb: day -> time blocks array)
+   
+4. parent_teen_links table:
+   - id (uuid, primary key)
+   - parent_user_id (foreign key)
+   - teen_user_id (foreign key)
+   - invite_code (varchar, unique)
+   - status (enum: 'pending', 'active', 'revoked')
+   - supervision_level (enum: 'summary_only', 'detailed')
+   - created_at
+   
+5. parent_guardrails table:
+   - id (uuid, primary key)
+   - link_id (foreign key to parent_teen_links)
+   - max_weekly_training_minutes (integer, nullable)
+   - min_nightly_sleep_hours (decimal, default 8)
+   - no_weight_loss_mode (boolean, default true)
+   - created_at, updated_at
+   
+6. teen_sharing_preferences table:
+   - id (uuid, primary key)
+   - teen_profile_id (foreign key)
+   - share_sleep_trend (boolean, default true)
+   - share_training_trend (boolean, default true)
+   - share_nutrition_trend (boolean, default true)
+   - share_detailed_logs (boolean, default false)
+
+7. daily_checkins table:
+   - id (uuid, primary key)
+   - teen_profile_id (foreign key)
+   - date (date)
+   - energy_level (integer 1-5)
+   - soreness_level (integer 1-5)
+   - mood_level (integer 1-5)
+   - stress_level (integer 1-5)
+   - pain_notes (text, nullable)
+   - has_pain_flag (boolean, default false)
+   - created_at
+
+8. sleep_logs table:
+   - id (uuid, primary key)
+   - teen_profile_id (foreign key)
+   - date (date)
+   - bedtime (timestamp)
+   - wake_time (timestamp)
+   - total_hours (decimal)
+   - source (enum: 'manual', 'apple_health', 'other')
+   - created_at
+
+9. workout_logs table:
+   - id (uuid, primary key)
+   - teen_profile_id (foreign key)
+   - date (date)
+   - workout_type (enum: 'sport_practice', 'gym', 'pt_rehab', 'mobility', 'cardio', 'other')
+   - sport_name (varchar, nullable)
+   - duration_minutes (integer)
+   - rpe (integer 1-10, nullable)
+   - notes (text, nullable)
+   - source (enum: 'manual', 'apple_health', 'other')
+   - created_at
+
+10. nutrition_logs table:
+    - id (uuid, primary key)
+    - teen_profile_id (foreign key)
+    - date (date)
+    - meal_type (enum: 'breakfast', 'lunch', 'dinner', 'snack')
+    - calories (integer, nullable)
+    - protein_g (decimal, nullable)
+    - carbs_g (decimal, nullable)
+    - fat_g (decimal, nullable)
+    - notes (text, nullable)
+    - source (enum: 'manual', 'apple_health', 'other')
+    - created_at
+
+11. pt_routines table (for scoliosis support):
+    - id (uuid, primary key)
+    - teen_profile_id (foreign key)
+    - routine_name (varchar)
+    - exercises (jsonb array of exercise objects)
+    - prescribed_by (varchar, nullable)
+    - created_at, updated_at
+
+12. pt_adherence_logs table:
+    - id (uuid, primary key)
+    - routine_id (foreign key)
+    - date (date)
+    - completed (boolean)
+    - exercises_completed (jsonb array)
+    - brace_minutes (integer, nullable)
+    - notes (text, nullable)
+    - created_at
+
+13. morning_briefs table:
+    - id (uuid, primary key)
+    - teen_profile_id (foreign key)
+    - date (date)
+    - brief_json (jsonb - structured morning brief data)
+    - created_at
+
+14. recommendations table:
+    - id (uuid, primary key)
+    - morning_brief_id (foreign key)
+    - recommendations_json (jsonb - LLM output with citations)
+    - created_at
+
+15. safety_alerts table:
+    - id (uuid, primary key)
+    - teen_profile_id (foreign key)
+    - alert_type (enum: 'sleep_deficit', 'training_spike', 'pain_flag', 'low_intake', 'overtraining')
+    - severity (enum: 'info', 'warning', 'critical')
+    - message (text)
+    - acknowledged_by_teen (boolean, default false)
+    - acknowledged_by_parent (boolean, default false)
+    - created_at
+
+API ENDPOINTS to create:
+- POST /auth/register (with role)
+- POST /auth/login
+- GET /auth/me
+
+- GET /profile (get current user's profile)
+- PUT /profile (update profile)
+
+- POST /teen/goals (set goals and weights)
+- GET /teen/goals
+- PUT /teen/goals
+
+- POST /link/generate-code (parent generates invite code)
+- POST /link/accept (teen accepts with code)
+- GET /link/status
+
+- POST /guardrails (parent sets guardrails)
+- GET /guardrails
+- PUT /guardrails
+
+- POST /checkin (daily checkin)
+- GET /checkins?start_date=&end_date=
+
+- POST /sleep (log sleep)
+- GET /sleep?start_date=&end_date=
+
+- POST /workout (log workout)
+- GET /workouts?start_date=&end_date=
+
+- POST /nutrition (log meal)
+- GET /nutrition?start_date=&end_date=
+
+- POST /pt-routine (create PT routine)
+- GET /pt-routines
+- POST /pt-adherence (log PT completion)
+- GET /pt-adherence?start_date=&end_date=
+
+- GET /morning-brief (get today's or generate)
+- GET /recommendations (get today's recommendations)
+
+- GET /safety-alerts
+- PUT /safety-alerts/:id/acknowledge
+
+- GET /parent/dashboard (aggregated view based on sharing preferences)
+- GET /parent/alerts
+
+Include proper JWT authentication middleware.
+Add input validation with express-validator or zod.
+Use proper error handling.
+Do NOT use health data for any advertising - add comment noting this Apple requirement.
