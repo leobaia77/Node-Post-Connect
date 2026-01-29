@@ -1,0 +1,77 @@
+Create a React Native Expo app for iOS with the following:
+
+SETUP:
+- Use Expo SDK 51 or latest
+- TypeScript
+- Expo Router for navigation
+- React Query for API state management
+- Secure storage for auth tokens
+- Environment variables for API URL
+
+SCREENS TO CREATE:
+
+1. Auth Flow (app/(auth)/):
+   - login.tsx: Email/password login with "Sign in with Apple" button placeholder
+   - register.tsx: Registration with role selection (Teen or Parent)
+   - Redirect to appropriate flow after login based on role
+
+2. Teen Onboarding (app/(teen-onboarding)/):
+   - age-range.tsx: Select age range (13-14, 15-16, 17-19)
+   - goals.tsx: Multi-select goals with priority sliders
+     * Growth-focused (general healthy growth)
+     * Muscle growth
+     * Bone health
+     * Scoliosis support
+     * Athletic performance
+   - sports.tsx: Add sports with level (recreational/school/club/elite)
+   - availability.tsx: Weekly schedule editor (Mon-Sun time blocks)
+   - connect-health.tsx: Placeholder for Apple Health connection (Phase 2)
+   - link-parent.tsx: Enter parent invite code (optional)
+
+3. Parent Onboarding (app/(parent-onboarding)/):
+   - generate-code.tsx: Generate and display invite code for teen
+   - supervision.tsx: Select supervision level
+   - guardrails.tsx: Set guardrails (max training, min sleep, no-weight-loss toggle)
+
+DESIGN REQUIREMENTS:
+- Use a calming color palette (soft blues, greens, whites)
+- Large touch targets for teen usability
+- Clear, non-judgmental language throughout
+- Progress indicators during onboarding
+- Input validation with helpful error messages
+
+FOLDER STRUCTURE:
+/app
+  /(auth)
+    login.tsx
+    register.tsx
+  /(teen-onboarding)
+    _layout.tsx
+    age-range.tsx
+    goals.tsx
+    sports.tsx
+    availability.tsx
+    connect-health.tsx
+    link-parent.tsx
+  /(parent-onboarding)
+    _layout.tsx
+    generate-code.tsx
+    supervision.tsx
+    guardrails.tsx
+/components
+  /ui (buttons, inputs, cards, sliders)
+  /forms
+/hooks
+  useAuth.ts
+  useApi.ts
+/services
+  api.ts
+  storage.ts
+/types
+  index.ts
+
+Create a shared API service that handles:
+- Base URL configuration
+- Auth token attachment
+- Error handling
+- Token refresh logic
