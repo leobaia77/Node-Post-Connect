@@ -1,9 +1,10 @@
 import { db } from "./db";
-import { eq, and, gte, lte, desc } from "drizzle-orm";
+import { eq, and, gte, lte, desc, isNull } from "drizzle-orm";
 import {
   users, profiles, teenProfiles, parentTeenLinks, parentGuardrails,
   teenSharingPreferences, dailyCheckins, sleepLogs, workoutLogs,
-  nutritionLogs, ptRoutines, ptAdherenceLogs, morningBriefs,
+  nutritionLogs, ptRoutines, ptAdherenceLogs, ptExercises, ptRoutineExercises,
+  braceSchedules, braceWearingLogs, symptomLogs, morningBriefs,
   recommendations, safetyAlerts,
   type User, type InsertUser, type Profile, type InsertProfile,
   type TeenProfile, type InsertTeenProfile, type ParentTeenLink, type InsertParentTeenLink,
@@ -11,7 +12,10 @@ import {
   type InsertTeenSharingPreferences, type DailyCheckin, type InsertDailyCheckin,
   type SleepLog, type InsertSleepLog, type WorkoutLog, type InsertWorkoutLog,
   type NutritionLog, type InsertNutritionLog, type PtRoutine, type InsertPtRoutine,
-  type PtAdherenceLog, type InsertPtAdherenceLog, type MorningBrief, type InsertMorningBrief,
+  type PtAdherenceLog, type InsertPtAdherenceLog, type PtExercise, type InsertPtExercise,
+  type PtRoutineExercise, type InsertPtRoutineExercise, type BraceSchedule, type InsertBraceSchedule,
+  type BraceWearingLog, type InsertBraceWearingLog, type SymptomLog, type InsertSymptomLog,
+  type MorningBrief, type InsertMorningBrief,
   type Recommendation, type InsertRecommendation, type SafetyAlert, type InsertSafetyAlert
 } from "@shared/schema";
 
@@ -75,7 +79,33 @@ export interface IStorage {
 
   // PT Adherence Logs
   getPtAdherenceLogs(routineId: string, startDate: string, endDate: string): Promise<PtAdherenceLog[]>;
+  getPtAdherenceLogsByProfile(teenProfileId: string, startDate: string, endDate: string): Promise<PtAdherenceLog[]>;
   createPtAdherenceLog(data: InsertPtAdherenceLog): Promise<PtAdherenceLog>;
+  updatePtAdherenceLog(id: string, data: Partial<PtAdherenceLog>): Promise<PtAdherenceLog | undefined>;
+
+  // PT Exercises
+  getPtExercises(): Promise<PtExercise[]>;
+  getPtExercisesByRoutine(routineId: string): Promise<(PtRoutineExercise & { exercise: PtExercise })[]>;
+  createPtExercise(data: InsertPtExercise): Promise<PtExercise>;
+  addExerciseToRoutine(data: InsertPtRoutineExercise): Promise<PtRoutineExercise>;
+
+  // Brace Schedules
+  getBraceSchedule(teenProfileId: string): Promise<BraceSchedule | undefined>;
+  createBraceSchedule(data: InsertBraceSchedule): Promise<BraceSchedule>;
+  updateBraceSchedule(id: string, data: Partial<BraceSchedule>): Promise<BraceSchedule | undefined>;
+
+  // Brace Wearing Logs
+  getBraceWearingLogs(teenProfileId: string, date: string): Promise<BraceWearingLog[]>;
+  getBraceWearingLogsByRange(teenProfileId: string, startDate: string, endDate: string): Promise<BraceWearingLog[]>;
+  createBraceWearingLog(data: InsertBraceWearingLog): Promise<BraceWearingLog>;
+  updateBraceWearingLog(id: string, data: Partial<BraceWearingLog>): Promise<BraceWearingLog | undefined>;
+  getActiveBraceSession(teenProfileId: string): Promise<BraceWearingLog | undefined>;
+
+  // Symptom Logs
+  getSymptomLogs(teenProfileId: string, startDate: string, endDate: string): Promise<SymptomLog[]>;
+  getSymptomLogByDate(teenProfileId: string, date: string): Promise<SymptomLog | undefined>;
+  createSymptomLog(data: InsertSymptomLog): Promise<SymptomLog>;
+  updateSymptomLog(id: string, data: Partial<SymptomLog>): Promise<SymptomLog | undefined>;
 
   // Morning Briefs
   getMorningBrief(teenProfileId: string, date: string): Promise<MorningBrief | undefined>;
@@ -371,6 +401,151 @@ export class DatabaseStorage implements IStorage {
     if (byTeen) updates.acknowledgedByTeen = true;
     if (byParent) updates.acknowledgedByParent = true;
     const result = await db.update(safetyAlerts).set(updates).where(eq(safetyAlerts.id, id)).returning();
+    return result[0];
+  }
+
+  // PT Adherence - Additional Methods
+  async getPtAdherenceLogsByProfile(teenProfileId: string, startDate: string, endDate: string): Promise<PtAdherenceLog[]> {
+    const routines = await this.getPtRoutines(teenProfileId);
+    if (routines.length === 0) return [];
+    
+    const allLogs: PtAdherenceLog[] = [];
+    for (const routine of routines) {
+      const logs = await this.getPtAdherenceLogs(routine.id, startDate, endDate);
+      allLogs.push(...logs);
+    }
+    return allLogs;
+  }
+
+  async updatePtAdherenceLog(id: string, data: Partial<PtAdherenceLog>): Promise<PtAdherenceLog | undefined> {
+    const result = await db.update(ptAdherenceLogs).set(data).where(eq(ptAdherenceLogs.id, id)).returning();
+    return result[0];
+  }
+
+  // PT Exercises
+  async getPtExercises(): Promise<PtExercise[]> {
+    return db.select().from(ptExercises).orderBy(ptExercises.name);
+  }
+
+  async getPtExercisesByRoutine(routineId: string): Promise<(PtRoutineExercise & { exercise: PtExercise })[]> {
+    const result = await db.select({
+      id: ptRoutineExercises.id,
+      routineId: ptRoutineExercises.routineId,
+      exerciseId: ptRoutineExercises.exerciseId,
+      orderIndex: ptRoutineExercises.orderIndex,
+      customNotes: ptRoutineExercises.customNotes,
+      exercise: ptExercises,
+    }).from(ptRoutineExercises)
+      .innerJoin(ptExercises, eq(ptRoutineExercises.exerciseId, ptExercises.id))
+      .where(eq(ptRoutineExercises.routineId, routineId))
+      .orderBy(ptRoutineExercises.orderIndex);
+    
+    return result.map(r => ({
+      ...r,
+      exercise: r.exercise,
+    }));
+  }
+
+  async createPtExercise(data: InsertPtExercise): Promise<PtExercise> {
+    const result = await db.insert(ptExercises).values(data).returning();
+    return result[0];
+  }
+
+  async addExerciseToRoutine(data: InsertPtRoutineExercise): Promise<PtRoutineExercise> {
+    const result = await db.insert(ptRoutineExercises).values(data).returning();
+    return result[0];
+  }
+
+  // Brace Schedules
+  async getBraceSchedule(teenProfileId: string): Promise<BraceSchedule | undefined> {
+    const result = await db.select().from(braceSchedules)
+      .where(eq(braceSchedules.teenProfileId, teenProfileId))
+      .orderBy(desc(braceSchedules.createdAt))
+      .limit(1);
+    return result[0];
+  }
+
+  async createBraceSchedule(data: InsertBraceSchedule): Promise<BraceSchedule> {
+    const result = await db.insert(braceSchedules).values(data).returning();
+    return result[0];
+  }
+
+  async updateBraceSchedule(id: string, data: Partial<BraceSchedule>): Promise<BraceSchedule | undefined> {
+    const result = await db.update(braceSchedules).set(data).where(eq(braceSchedules.id, id)).returning();
+    return result[0];
+  }
+
+  // Brace Wearing Logs
+  async getBraceWearingLogs(teenProfileId: string, date: string): Promise<BraceWearingLog[]> {
+    return db.select().from(braceWearingLogs)
+      .where(and(
+        eq(braceWearingLogs.teenProfileId, teenProfileId),
+        eq(braceWearingLogs.date, date)
+      ))
+      .orderBy(desc(braceWearingLogs.startTime));
+  }
+
+  async getBraceWearingLogsByRange(teenProfileId: string, startDate: string, endDate: string): Promise<BraceWearingLog[]> {
+    return db.select().from(braceWearingLogs)
+      .where(and(
+        eq(braceWearingLogs.teenProfileId, teenProfileId),
+        gte(braceWearingLogs.date, startDate),
+        lte(braceWearingLogs.date, endDate)
+      ))
+      .orderBy(desc(braceWearingLogs.date), desc(braceWearingLogs.startTime));
+  }
+
+  async createBraceWearingLog(data: InsertBraceWearingLog): Promise<BraceWearingLog> {
+    const result = await db.insert(braceWearingLogs).values(data).returning();
+    return result[0];
+  }
+
+  async updateBraceWearingLog(id: string, data: Partial<BraceWearingLog>): Promise<BraceWearingLog | undefined> {
+    const result = await db.update(braceWearingLogs).set(data).where(eq(braceWearingLogs.id, id)).returning();
+    return result[0];
+  }
+
+  async getActiveBraceSession(teenProfileId: string): Promise<BraceWearingLog | undefined> {
+    const today = new Date().toISOString().split('T')[0];
+    const result = await db.select().from(braceWearingLogs)
+      .where(and(
+        eq(braceWearingLogs.teenProfileId, teenProfileId),
+        eq(braceWearingLogs.date, today),
+        isNull(braceWearingLogs.endTime)
+      ))
+      .orderBy(desc(braceWearingLogs.startTime))
+      .limit(1);
+    return result[0];
+  }
+
+  // Symptom Logs
+  async getSymptomLogs(teenProfileId: string, startDate: string, endDate: string): Promise<SymptomLog[]> {
+    return db.select().from(symptomLogs)
+      .where(and(
+        eq(symptomLogs.teenProfileId, teenProfileId),
+        gte(symptomLogs.date, startDate),
+        lte(symptomLogs.date, endDate)
+      ))
+      .orderBy(desc(symptomLogs.date));
+  }
+
+  async getSymptomLogByDate(teenProfileId: string, date: string): Promise<SymptomLog | undefined> {
+    const result = await db.select().from(symptomLogs)
+      .where(and(
+        eq(symptomLogs.teenProfileId, teenProfileId),
+        eq(symptomLogs.date, date)
+      ))
+      .limit(1);
+    return result[0];
+  }
+
+  async createSymptomLog(data: InsertSymptomLog): Promise<SymptomLog> {
+    const result = await db.insert(symptomLogs).values(data).returning();
+    return result[0];
+  }
+
+  async updateSymptomLog(id: string, data: Partial<SymptomLog>): Promise<SymptomLog | undefined> {
+    const result = await db.update(symptomLogs).set(data).where(eq(symptomLogs.id, id)).returning();
     return result[0];
   }
 }
