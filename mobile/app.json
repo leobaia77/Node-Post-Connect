@@ -13,7 +13,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.growthtrack.app"
+      "bundleIdentifier": "com.growthtrack.app",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "GrowthTrack reads your health data to provide personalized sleep, activity, and nutrition recommendations tailored to your athletic goals.",
+        "NSHealthUpdateUsageDescription": "GrowthTrack does not write to your health data."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +35,17 @@
       "output": "static",
       "favicon": "./assets/favicon.png"
     },
-    "plugins": ["expo-router", "expo-secure-store"],
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-health-connect",
+        {
+          "healthSharePermission": "GrowthTrack reads your health data to provide personalized recommendations.",
+          "healthUpdatePermission": "GrowthTrack does not write to your health data."
+        }
+      ]
+    ],
     "experiments": {
       "typedRoutes": true
     },

@@ -591,6 +591,123 @@ export async function registerRoutes(
     }
   });
 
+  // HEALTH SYNC ROUTES (Apple HealthKit)
+  app.post("/api/health-sync", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+    try {
+      const { sleep, workouts, activity, nutrition } = req.body;
+      
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) {
+        return res.status(404).json({ error: "Teen profile not found" });
+      }
+
+      let sleepSynced = 0;
+      let workoutsSynced = 0;
+      let nutritionSynced = 0;
+
+      // Sync sleep data - create new entries (duplicates handled by unique constraint if exists)
+      if (Array.isArray(sleep)) {
+        for (const entry of sleep) {
+          try {
+            await storage.createSleepLog({
+              teenProfileId: teenProfile.id,
+              date: entry.date,
+              totalHours: String(entry.totalHours),
+              bedtime: entry.bedtime,
+              wakeTime: entry.wakeTime,
+              quality: 'good', // Default quality for HealthKit synced data
+            });
+            sleepSynced++;
+          } catch (e) {
+            // Entry may already exist for this date - this is expected
+            console.log('Sleep entry already exists or failed:', entry.date);
+          }
+        }
+      }
+
+      // Sync workout data
+      if (Array.isArray(workouts)) {
+        for (const entry of workouts) {
+          try {
+            const workoutType = mapHealthKitWorkoutType(entry.workoutType);
+            await storage.createWorkoutLog({
+              teenProfileId: teenProfile.id,
+              date: entry.date,
+              workoutType,
+              durationMinutes: entry.durationMinutes,
+              intensity: 'moderate', // Default for HealthKit data
+              notes: entry.avgHeartRate ? `Avg HR: ${entry.avgHeartRate} bpm` : null,
+            });
+            workoutsSynced++;
+          } catch (e) {
+            console.log('Workout entry failed:', entry.date);
+          }
+        }
+      }
+
+      // Sync nutrition data (only if data present)
+      if (nutrition && nutrition.calories !== null) {
+        try {
+          await storage.createNutritionLog({
+            teenProfileId: teenProfile.id,
+            date: nutrition.date,
+            mealType: 'snack', // Use snack as catch-all for daily totals
+            calories: nutrition.calories,
+            protein: nutrition.protein ? String(nutrition.protein) : null,
+            carbs: nutrition.carbohydrates ? String(nutrition.carbohydrates) : null,
+            fats: nutrition.fat ? String(nutrition.fat) : null,
+            description: 'Daily total synced from Apple Health',
+          });
+          nutritionSynced = 1;
+        } catch (e) {
+          console.log('Nutrition entry failed:', nutrition.date);
+        }
+      }
+
+      res.json({
+        success: true,
+        syncedAt: new Date().toISOString(),
+        summary: {
+          sleep: sleepSynced,
+          workouts: workoutsSynced,
+          nutrition: nutritionSynced,
+        },
+      });
+    } catch (error) {
+      console.error("Error syncing health data:", error);
+      res.status(500).json({ error: "Failed to sync health data" });
+    }
+  });
+
+  // Helper function to map HealthKit workout types to our enum
+  function mapHealthKitWorkoutType(hkType: string): string {
+    const mapping: Record<string, string> = {
+      'Running': 'cardio',
+      'Cycling': 'cardio',
+      'Swimming': 'cardio',
+      'Walking': 'cardio',
+      'Hiking': 'cardio',
+      'Soccer': 'sport',
+      'Basketball': 'sport',
+      'Tennis': 'sport',
+      'Volleyball': 'sport',
+      'Baseball': 'sport',
+      'American Football': 'sport',
+      'Traditional Strength Training': 'strength',
+      'Functional Strength Training': 'strength',
+      'Yoga': 'flexibility',
+      'Dance': 'cardio',
+      'Cross Training': 'hiit',
+      'Mixed Metabolic Cardio Training': 'hiit',
+    };
+    return mapping[hkType] || 'other';
+  }
+
   // MORNING BRIEF ROUTES
   app.get("/api/morning-brief", authMiddleware, async (req: AuthRequest, res) => {
     try {

@@ -1,0 +1,101 @@
+Add Apple HealthKit integration to the React Native Expo app.
+
+IMPORTANT: This requires Expo development build, NOT Expo Go.
+
+SETUP:
+1. Install expo-health-connect (or react-native-health if needed)
+2. Configure app.json for HealthKit entitlement
+3. Add usage description strings for privacy prompts
+
+APP.JSON additions:
+{
+  "expo": {
+    "ios": {
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "This app reads your health data to provide personalized sleep, activity, and nutrition recommendations.",
+        "NSHealthUpdateUsageDescription": "This app does not write health data."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": ["health-records"]
+      }
+    }
+  }
+}
+
+CREATE: services/healthKit.ts
+
+DATA TYPES TO READ:
+- Sleep Analysis (HKCategoryTypeIdentifierSleepAnalysis)
+- Workouts (HKWorkoutType)
+- Steps (HKQuantityTypeIdentifierStepCount)
+- Active Energy (HKQuantityTypeIdentifierActiveEnergyBurned)
+- Heart Rate (HKQuantityTypeIdentifierHeartRate) - optional
+- Dietary Energy (HKQuantityTypeIdentifierDietaryEnergyConsumed)
+- Dietary Protein (HKQuantityTypeIdentifierDietaryProtein)
+- Dietary Carbohydrates (HKQuantityTypeIdentifierDietaryCarbohydrates)
+- Dietary Fat (HKQuantityTypeIdentifierDietaryFatTotal)
+
+FUNCTIONS TO CREATE:
+
+requestHealthKitPermissions(): Promise<boolean>
+- Request read-only permissions for all data types
+- Return true if granted, false if denied
+- Show educational prompt before system prompt
+
+getSleepData(startDate: Date, endDate: Date): Promise<SleepEntry[]>
+- Query sleep analysis samples
+- Parse into structured entries with bedtime, wake time, total hours
+- Handle "in bed" vs "asleep" categories
+
+getWorkoutData(startDate: Date, endDate: Date): Promise<WorkoutEntry[]>
+- Query workout samples
+- Map HKWorkoutActivityType to our workout_type enum
+- Include duration, energy burned, heart rate summary if available
+
+getStepsAndActivity(date: Date): Promise<ActivitySummary>
+- Steps, active energy, move minutes
+
+getNutritionData(date: Date): Promise<NutritionSummary>
+- Aggregate daily totals for calories, protein, carbs, fat
+- Note: May be incomplete if user doesn't use a food logger that syncs
+
+CREATE: hooks/useHealthKitSync.ts
+- Hook that syncs HealthKit data to backend
+- Runs on app foreground event
+- Shows sync status indicator
+- Handles permission denied state gracefully
+
+UPDATE: connect-health.tsx (onboarding screen)
+- Explain what data will be read and why
+- List specific permissions being requested
+- "Privacy: Your health data is encrypted and never used for advertising"
+- Show permission request flow
+- Handle denial with alternative manual entry option
+
+UPDATE: settings/connections.tsx
+- Show HealthKit connection status
+- Last sync time
+- "Resync Now" button
+- "Manage in Settings" button (opens iOS Settings)
+- Data quality hints:
+  - "✓ Sleep data found"
+  - "⚠ Nutrition data not found - connect a food logger"
+
+BACKEND SYNC ENDPOINT:
+POST /health-sync
+Body: {
+  sleep: SleepEntry[],
+  workouts: WorkoutEntry[],
+  activity: ActivitySummary,
+  nutrition: NutritionSummary
+}
+- Upserts data to respective tables
+- Marks source as 'apple_health'
+- Returns sync summary
+
+CRITICAL APPLE COMPLIANCE (add as comments in code):
+- Never use HealthKit data for advertising or marketing
+- Never share HealthKit data with third parties for marketing
+- Store only on device or in encrypted backend, never in iCloud
+- Provide clear data deletion mechanism

@@ -64,4 +64,4 @@ Organized into `client/` (React web frontend), `mobile/` (React Native Expo app)
 ### Integrations
 - **OpenAI GPT Models:** Utilized by the LLM Orchestrator for AI-driven recommendations via Replit AI Integrations.
 - **Expo Push API:** For sending push notifications to users.
-- **Apple HealthKit:** (Planned integration) For connecting with Apple Health data, with strict compliance for data privacy.
+- **Apple HealthKit:** Fully integrated for iOS devices. Read-only access to sleep, workouts, activity, and nutrition data. Complies with Apple's HealthKit guidelines: no advertising use, encrypted storage, clear data deletion mechanism in settings. Services: `mobile/services/healthKit.ts`, hook: `mobile/hooks/useHealthKitSync.ts`, backend sync endpoint: `POST /api/health-sync`.
