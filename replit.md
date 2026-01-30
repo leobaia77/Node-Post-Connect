@@ -73,3 +73,16 @@ Organized into `client/` (React web frontend), `mobile/` (React Native Expo app)
 - **OpenAI GPT Models:** Utilized by the LLM Orchestrator for AI-driven recommendations via Replit AI Integrations.
 - **Expo Push API:** For sending push notifications to users.
 - **Apple HealthKit:** Fully integrated for iOS devices. Read-only access to sleep, workouts, activity, and nutrition data. Complies with Apple's HealthKit guidelines: no advertising use, encrypted storage, clear data deletion mechanism in settings. Services: `mobile/services/healthKit.ts`, hook: `mobile/hooks/useHealthKitSync.ts`, backend sync endpoint: `POST /api/health-sync`.
+
+### App Store Readiness (Mobile)
+- **Legal Documentation:** Privacy Policy and Terms of Service screens accessible from Settings with comprehensive health data policies, medical disclaimers, and age requirements (13+).
+- **Data Portability:** Export feature supporting JSON and CSV formats with email and download options. Located at `mobile/app/(teen-app)/settings/data-export.tsx`.
+- **Account Deletion:** 2-step confirmation flow with explicit user acknowledgment before permanent deletion. Includes warnings about data loss and HealthKit disconnection.
+- **Offline Support:** 
+  - Data caching with 7-day expiry using AsyncStorage
+  - Sync queue for offline actions with 3 retry attempts
+  - Fetch-based network detection (avoids SDK conflicts)
+  - Automatic sync on reconnect
+  - Services: `mobile/services/offlineManager.ts`, hooks: `mobile/hooks/useOffline.ts`
+- **UI Components:** Production-ready components for loading states, skeleton loaders with shimmer animations, empty states (data/search/error/offline variants), and offline indicators with accessibility support. Located in `mobile/components/`.
+- **App Assets:** Generated icon.png, splash.png, adaptive-icon.png, and favicon.png in `mobile/assets/` with teal/emerald brand colors.

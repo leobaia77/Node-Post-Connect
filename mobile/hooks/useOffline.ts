@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { offlineManager } from '@/services/offlineManager';
 
 export function useOfflineStatus() {
@@ -40,47 +40,53 @@ export function useCachedData<T>(
   const [isFromCache, setIsFromCache] = useState(false);
   const { isOnline } = useOfflineStatus();
   const { enabled = true } = options;
+  
+  const fetchFnRef = useRef(fetchFn);
+  fetchFnRef.current = fetchFn;
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (offlineManager.getIsOnline()) {
+        const freshData = await fetchFnRef.current();
+        setData(freshData);
+        setIsFromCache(false);
+        await offlineManager.cacheData(key, freshData);
+      } else {
+        const cachedData = await offlineManager.getCachedData<T>(key);
+        if (cachedData) {
+          setData(cachedData);
+          setIsFromCache(true);
+        } else {
+          setError(new Error('No cached data available'));
+        }
+      }
+    } catch (err) {
+      const cachedData = await offlineManager.getCachedData<T>(key);
+      if (cachedData) {
+        setData(cachedData);
+        setIsFromCache(true);
+      } else {
+        setError(err instanceof Error ? err : new Error('Failed to load data'));
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [key]);
 
   useEffect(() => {
     if (!enabled) {
       setIsLoading(false);
       return;
     }
-
-    const loadData = async () => {
-      setIsLoading(true);
-      setError(null);
-
-      try {
-        if (isOnline) {
-          const freshData = await fetchFn();
-          setData(freshData);
-          setIsFromCache(false);
-          await offlineManager.cacheData(key, freshData);
-        } else {
-          const cachedData = await offlineManager.getCachedData<T>(key);
-          if (cachedData) {
-            setData(cachedData);
-            setIsFromCache(true);
-          } else {
-            setError(new Error('No cached data available'));
-          }
-        }
-      } catch (err) {
-        const cachedData = await offlineManager.getCachedData<T>(key);
-        if (cachedData) {
-          setData(cachedData);
-          setIsFromCache(true);
-        } else {
-          setError(err instanceof Error ? err : new Error('Failed to load data'));
-        }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     loadData();
-  }, [key, isOnline, enabled]);
+  }, [key, isOnline, enabled, loadData]);
 
-  return { data, isLoading, error, isFromCache, refetch: () => {} };
+  const refetch = useCallback(() => {
+    return loadData();
+  }, [loadData]);
+
+  return { data, isLoading, error, isFromCache, refetch };
 }
