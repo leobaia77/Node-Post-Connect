@@ -1,8 +1,15 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db";
 import { authMiddleware, generateToken, hashPassword, comparePassword, requireRole, type AuthRequest } from "./auth";
-import { registerSchema, loginSchema } from "@shared/schema";
+import { 
+  registerSchema, loginSchema, users, profiles, teenProfiles, parentTeenLinks,
+  parentGuardrails, teenSharingPreferences, dailyCheckins, sleepLogs, workoutLogs,
+  nutritionLogs, ptRoutines, ptAdherenceLogs, ptRoutineExercises, braceSchedules,
+  braceWearingLogs, symptomLogs, morningBriefs, recommendations, safetyAlerts
+} from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 import { format, subDays } from "date-fns";
@@ -1497,6 +1504,235 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error registering push token:", error);
       res.status(500).json({ error: "Failed to register push token" });
+    }
+  });
+
+  // DATA EXPORT - Required for App Store compliance
+  // Allows users to export all their health data in JSON or CSV format
+  app.get("/api/export-data", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const formatType = (req.query.format as string) || "json";
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const profile = await storage.getProfile(user.id);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const exportData: Record<string, unknown> = {
+        exportDate: new Date().toISOString(),
+        user: {
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt,
+        },
+        profile: {
+          displayName: profile.displayName,
+          ageRange: profile.ageRange,
+          timezone: profile.timezone,
+        },
+      };
+
+      // If teen user, export all health data
+      if (user.role === "teen") {
+        const teenProfile = await storage.getTeenProfileByUserId(user.id);
+        if (teenProfile) {
+          const startDate = "2020-01-01";
+          const endDate = format(new Date(), "yyyy-MM-dd");
+
+          exportData.teenProfile = {
+            goals: teenProfile.goals,
+            goalWeights: teenProfile.goalWeights,
+            sports: teenProfile.sports,
+            weeklyAvailability: teenProfile.weeklyAvailability,
+            hasScoliosisSupport: teenProfile.hasScoliosisSupport,
+          };
+
+          // Fetch all health logs
+          const [checkins, sleepLogs, workoutLogs, nutritionLogs, ptRoutines] = await Promise.all([
+            storage.getCheckins(teenProfile.id, startDate, endDate),
+            storage.getSleepLogs(teenProfile.id, startDate, endDate),
+            storage.getWorkoutLogs(teenProfile.id, startDate, endDate),
+            storage.getNutritionLogs(teenProfile.id, startDate, endDate),
+            storage.getPtRoutines(teenProfile.id),
+          ]);
+
+          exportData.dailyCheckins = checkins;
+          exportData.sleepLogs = sleepLogs;
+          exportData.workoutLogs = workoutLogs;
+          exportData.nutritionLogs = nutritionLogs;
+          exportData.ptRoutines = ptRoutines;
+
+          // Fetch PT adherence logs for all routines (always, not just scoliosis)
+          if (ptRoutines.length > 0) {
+            const ptAdherenceLogs = await Promise.all(
+              ptRoutines.map(routine => storage.getPtAdherenceLogs(routine.id, startDate, endDate))
+            );
+            exportData.ptAdherenceLogs = ptAdherenceLogs.flat();
+          }
+
+          // Fetch scoliosis data if enabled
+          if (teenProfile.hasScoliosisSupport) {
+            const [braceSchedule, braceLogs, symptomLogs] = await Promise.all([
+              storage.getBraceSchedule(teenProfile.id),
+              storage.getBraceWearingLogsByRange(teenProfile.id, startDate, endDate),
+              storage.getSymptomLogs(teenProfile.id, startDate, endDate),
+            ]);
+
+            exportData.braceSchedule = braceSchedule;
+            exportData.braceWearingLogs = braceLogs;
+            exportData.symptomLogs = symptomLogs;
+          }
+
+          // Fetch sharing preferences
+          const sharingPrefs = await storage.getSharingPreferences(teenProfile.id);
+          exportData.sharingPreferences = sharingPrefs;
+
+          // Fetch safety alerts
+          const alerts = await storage.getSafetyAlerts(teenProfile.id);
+          exportData.safetyAlerts = alerts;
+        }
+      }
+
+      // If parent user, export linked teen data visibility
+      if (user.role === "parent") {
+        const links = await storage.getLinksByParent(user.id);
+        exportData.parentTeenLinks = links.map(link => ({
+          status: link.status,
+          supervisionLevel: link.supervisionLevel,
+          createdAt: link.createdAt,
+        }));
+
+        const guardrails = await Promise.all(
+          links.filter(l => l.status === "active").map(l => storage.getGuardrails(l.id))
+        );
+        exportData.guardrails = guardrails.filter(Boolean);
+      }
+
+      if (formatType === "csv") {
+        // Convert to CSV format
+        const flattenObject = (obj: Record<string, unknown>, prefix = ""): Record<string, string> => {
+          const result: Record<string, string> = {};
+          for (const [key, value] of Object.entries(obj)) {
+            const newKey = prefix ? `${prefix}_${key}` : key;
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+              Object.assign(result, flattenObject(value as Record<string, unknown>, newKey));
+            } else if (Array.isArray(value)) {
+              result[newKey] = JSON.stringify(value);
+            } else {
+              result[newKey] = String(value ?? "");
+            }
+          }
+          return result;
+        };
+
+        const flattened = flattenObject(exportData);
+        const headers = Object.keys(flattened).join(",");
+        const values = Object.values(flattened).map(v => `"${v.replace(/"/g, '""')}"`).join(",");
+        const csv = `${headers}\n${values}`;
+
+        res.setHeader("Content-Type", "text/csv");
+        res.setHeader("Content-Disposition", `attachment; filename="growthtrack-export-${format(new Date(), "yyyy-MM-dd")}.csv"`);
+        res.send(csv);
+      } else {
+        res.setHeader("Content-Type", "application/json");
+        res.setHeader("Content-Disposition", `attachment; filename="growthtrack-export-${format(new Date(), "yyyy-MM-dd")}.json"`);
+        res.json(exportData);
+      }
+    } catch (error) {
+      console.error("Error exporting data:", error);
+      res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  // ACCOUNT DELETION - Required for App Store compliance
+  // Permanently deletes user account and all associated data
+  app.delete("/api/account", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { confirmEmail } = req.body;
+      const user = await storage.getUser(req.user!.userId);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      // Require email confirmation for safety
+      if (confirmEmail !== user.email) {
+        return res.status(400).json({ error: "Email confirmation does not match. Please confirm your email to delete your account." });
+      }
+
+      const profile = await storage.getProfile(user.id);
+      
+      // Delete all associated data in correct order (respecting foreign keys)
+      if (user.role === "teen" && profile) {
+        const teenProfile = await storage.getTeenProfile(profile.id);
+        if (teenProfile) {
+          // Delete health logs first (they reference teen profile)
+          await db.delete(dailyCheckins).where(eq(dailyCheckins.teenProfileId, teenProfile.id));
+          await db.delete(sleepLogs).where(eq(sleepLogs.teenProfileId, teenProfile.id));
+          await db.delete(workoutLogs).where(eq(workoutLogs.teenProfileId, teenProfile.id));
+          await db.delete(nutritionLogs).where(eq(nutritionLogs.teenProfileId, teenProfile.id));
+          
+          // Delete PT routines and adherence logs
+          const routines = await storage.getPtRoutines(teenProfile.id);
+          for (const routine of routines) {
+            await db.delete(ptRoutineExercises).where(eq(ptRoutineExercises.routineId, routine.id));
+            await db.delete(ptAdherenceLogs).where(eq(ptAdherenceLogs.routineId, routine.id));
+          }
+          await db.delete(ptRoutines).where(eq(ptRoutines.teenProfileId, teenProfile.id));
+          
+          // Delete scoliosis data
+          await db.delete(braceWearingLogs).where(eq(braceWearingLogs.teenProfileId, teenProfile.id));
+          await db.delete(braceSchedules).where(eq(braceSchedules.teenProfileId, teenProfile.id));
+          await db.delete(symptomLogs).where(eq(symptomLogs.teenProfileId, teenProfile.id));
+          
+          // Delete morning briefs and recommendations
+          const briefs = await db.select().from(morningBriefs).where(eq(morningBriefs.teenProfileId, teenProfile.id));
+          for (const brief of briefs) {
+            await db.delete(recommendations).where(eq(recommendations.morningBriefId, brief.id));
+          }
+          await db.delete(morningBriefs).where(eq(morningBriefs.teenProfileId, teenProfile.id));
+          
+          // Delete safety alerts
+          await db.delete(safetyAlerts).where(eq(safetyAlerts.teenProfileId, teenProfile.id));
+          
+          // Delete sharing preferences
+          await db.delete(teenSharingPreferences).where(eq(teenSharingPreferences.teenProfileId, teenProfile.id));
+          
+          // Delete parent-teen links where this teen is linked
+          const links = await storage.getLinksByTeen(user.id);
+          for (const link of links) {
+            await db.delete(parentGuardrails).where(eq(parentGuardrails.linkId, link.id));
+          }
+          await db.delete(parentTeenLinks).where(eq(parentTeenLinks.teenUserId, user.id));
+          
+          // Delete teen profile
+          await db.delete(teenProfiles).where(eq(teenProfiles.id, teenProfile.id));
+        }
+      }
+
+      if (user.role === "parent") {
+        // Delete parent-teen links and guardrails
+        const links = await storage.getLinksByParent(user.id);
+        for (const link of links) {
+          await db.delete(parentGuardrails).where(eq(parentGuardrails.linkId, link.id));
+        }
+        await db.delete(parentTeenLinks).where(eq(parentTeenLinks.parentUserId, user.id));
+      }
+
+      // Delete profile and user
+      if (profile) {
+        await db.delete(profiles).where(eq(profiles.id, profile.id));
+      }
+      await db.delete(users).where(eq(users.id, user.id));
+
+      res.json({ message: "Account and all associated data have been permanently deleted" });
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      res.status(500).json({ error: "Failed to delete account" });
     }
   });
 

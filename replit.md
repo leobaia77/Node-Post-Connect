@@ -76,8 +76,8 @@ Organized into `client/` (React web frontend), `mobile/` (React Native Expo app)
 
 ### App Store Readiness (Mobile)
 - **Legal Documentation:** Privacy Policy and Terms of Service screens accessible from Settings with comprehensive health data policies, medical disclaimers, and age requirements (13+).
-- **Data Portability:** Export feature supporting JSON and CSV formats with email and download options. Located at `mobile/app/(teen-app)/settings/data-export.tsx`.
-- **Account Deletion:** 2-step confirmation flow with explicit user acknowledgment before permanent deletion. Includes warnings about data loss and HealthKit disconnection.
+- **Data Portability:** Export feature supporting JSON and CSV formats with email and download options. Located at `mobile/app/(teen-app)/settings/data-export.tsx`. Backend endpoint: `GET /api/export-data?format=json|csv` - exports all user health data including check-ins, sleep, workouts, nutrition, PT routines, brace logs, symptoms, and safety alerts.
+- **Account Deletion:** 2-step confirmation flow with explicit user acknowledgment before permanent deletion. Includes warnings about data loss and HealthKit disconnection. Backend endpoint: `DELETE /api/account` - requires `confirmEmail` in body matching user's email, performs cascade deletion of all user data respecting foreign key constraints.
 - **Offline Support:** 
   - Data caching with 7-day expiry using AsyncStorage
   - Sync queue for offline actions with 3 retry attempts
