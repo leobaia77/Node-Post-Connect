@@ -1,13 +1,25 @@
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, RefreshControl } from 'react-native';
 import { useState, useCallback, useEffect } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { storage } from '@/services/storage';
 import type { User } from '@/types';
-import { MorningBriefCard, RecommendationsCard, TodayScheduleCard, ReadinessIndicator } from '@/components/teen';
+import { useRecommendations } from '@/hooks/useApi';
+import { 
+  MorningBriefCard, 
+  RecommendationsCard, 
+  TodayScheduleCard, 
+  ReadinessIndicator,
+  WeekFocusCard,
+  EscalationAlertBanner
+} from '@/components/teen';
 
 export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [dismissedEscalations, setDismissedEscalations] = useState<Set<string>>(new Set());
+  const queryClient = useQueryClient();
+  const { data: recommendations } = useRecommendations();
 
   useEffect(() => {
     loadUser();
@@ -21,8 +33,10 @@ export default function HomeScreen() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await loadUser();
+    queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    queryClient.invalidateQueries({ queryKey: ['morningBrief'] });
     setTimeout(() => setRefreshing(false), 1000);
-  }, []);
+  }, [queryClient]);
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -30,6 +44,21 @@ export default function HomeScreen() {
     if (hour < 17) return 'Good afternoon';
     return 'Good evening';
   };
+
+  const getEscalationKey = (flag: { type: string; reason: string }) => 
+    `${flag.type}_${flag.reason.slice(0, 50)}`;
+
+  const handleDismissEscalation = (index: number) => {
+    const flag = recommendations?.escalation_flags?.[index];
+    if (flag) {
+      const key = getEscalationKey(flag);
+      setDismissedEscalations(prev => new Set([...prev, key]));
+    }
+  };
+
+  const visibleEscalations = recommendations?.escalation_flags?.filter(
+    (flag) => !dismissedEscalations.has(getEscalationKey(flag))
+  ) || [];
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -61,8 +90,18 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        <EscalationAlertBanner 
+          flags={visibleEscalations}
+          onDismiss={handleDismissEscalation}
+        />
+
         <ReadinessIndicator />
         <MorningBriefCard />
+        
+        {recommendations?.week_focus && (
+          <WeekFocusCard weekFocus={recommendations.week_focus} />
+        )}
+        
         <TodayScheduleCard />
         <RecommendationsCard />
 

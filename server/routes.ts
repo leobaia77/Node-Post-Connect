@@ -679,6 +679,29 @@ export async function registerRoutes(
     }
   });
 
+  // Action completion tracking (stored client-side, this just acknowledges)
+  app.post("/api/recommendations/actions/complete", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+    try {
+      const { actionId, completed } = req.body;
+      
+      if (!actionId || typeof completed !== 'boolean') {
+        return res.status(400).json({ error: "actionId and completed are required" });
+      }
+
+      // Action completion is tracked client-side in secure storage
+      // This endpoint exists for future server-side tracking/analytics
+      res.json({ 
+        success: true, 
+        actionId, 
+        completed,
+        trackedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Error tracking action completion:", error);
+      res.status(500).json({ error: "Failed to track action completion" });
+    }
+  });
+
   // SAFETY ALERTS ROUTES
   
   // Get alerts for current teen user
