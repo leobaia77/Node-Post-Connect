@@ -1,0 +1,104 @@
+Continue the React Native Expo app. Create the main teen experience with bottom tab navigation.
+
+NAVIGATION (app/(teen-app)/_layout.tsx):
+Bottom tabs: Home, Plan, Log, Insights, Settings
+
+HOME TAB (app/(teen-app)/home.tsx):
+Components to create:
+1. MorningBriefCard:
+   - Expandable card showing yesterday's summary
+   - Sleep hours with trend indicator
+   - Training minutes
+   - Nutrition status (logged/not logged)
+   - Recovery flags if any
+
+2. RecommendationsCard:
+   - "Today's Actions" header
+   - 3-5 bullet action items (placeholder data for now)
+   - Each item has checkbox and "Why this?" info button
+   - "Why this?" opens modal with explanation
+
+3. TodayScheduleCard:
+   - Next scheduled activity
+   - Readiness indicator (green/yellow/red)
+   - "Adjust today" button opens modal to update soreness/availability
+
+4. ReadinessIndicator component:
+   - Visual gauge or simple color indicator
+   - Based on sleep + soreness + training load
+   - "What drives this?" expandable explanation
+
+PLAN TAB (app/(teen-app)/plan/):
+- index.tsx: Week calendar view
+- Components:
+  - WeekCalendar: Horizontal scrolling week view
+  - ActivityCard: Shows scheduled activities
+  - FreeTimeBlock: Shows available time
+- "Add Activity" FAB opens modal:
+  - Activity type selector
+  - Duration picker
+  - Intensity (RPE 1-10 slider)
+  - Sport tag selector
+  - Notes field
+
+LOG TAB (app/(teen-app)/log/):
+- index.tsx: Quick action buttons grid
+- Buttons:
+  1. "Log Meal" → meal-log.tsx
+  2. "Log Workout" → workout-log.tsx  
+  3. "Log PT/Brace" → pt-log.tsx
+  4. "Daily Check-in" → checkin.tsx
+
+- meal-log.tsx:
+  - Meal type selector (breakfast/lunch/dinner/snack)
+  - Quick entry: photo + notes + rough portion
+  - Optional: manual macro entry fields
+  - Save button
+
+- workout-log.tsx:
+  - Workout type dropdown
+  - Sport selector (if applicable)
+  - Duration picker
+  - RPE slider (1-10) with descriptions
+  - Notes field
+  - Quick templates: "Soccer Practice 90min", "Gym Session 45min", etc.
+
+- pt-log.tsx:
+  - Show prescribed PT routine checklist
+  - Timer for each exercise
+  - Brace wearing time entry (if applicable)
+  - Notes field
+  - "Complete Routine" button
+
+- checkin.tsx:
+  - Energy slider (1-5) with emoji indicators
+  - Soreness slider (1-5)
+  - Mood slider (1-5)
+  - Stress slider (1-5)
+  - Pain flag checkbox with notes field
+  - Submit saves and returns to Log tab
+
+INSIGHTS TAB (app/(teen-app)/insights.tsx):
+- Filter by goal area (dropdown)
+- Charts (use react-native-chart-kit or victory-native):
+  1. Sleep vs Training Load (dual axis line chart, last 14 days)
+  2. Macro Adherence (stacked bar or pie for today)
+  3. Consistency Score (progress ring)
+- "View Details" links for each metric
+
+SETTINGS TAB (app/(teen-app)/settings/):
+- index.tsx: Settings menu list
+- goals.tsx: Edit goals and priority weights
+- sharing.tsx: Toggle what parent can see
+- connections.tsx: Apple Health status, manage permissions
+- notifications.tsx: Set morning brief time, reminder toggles
+- account.tsx: Edit profile, sign out, delete account
+
+SHARED COMPONENTS:
+- Header with greeting ("Good morning, [Name]!")
+- Pull-to-refresh on main screens
+- Loading skeletons
+- Empty states with helpful prompts
+- Error boundaries with retry
+
+Use placeholder data initially. Connect to API endpoints from Phase 0.
