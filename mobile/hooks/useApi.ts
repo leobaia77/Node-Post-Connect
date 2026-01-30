@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/services/api';
-import type { TeenProfile, ParentProfile, DailyCheckin, SleepLog, WorkoutLog, NutritionLog } from '@/types';
+import type { TeenProfile, ParentProfile, DailyCheckin, SleepLog, WorkoutLog, NutritionLog, Recommendations, MorningBrief } from '@/types';
 
 export function useTeenProfile() {
   return useQuery<TeenProfile>({
@@ -111,6 +111,32 @@ export function useLogNutrition() {
     mutationFn: (data: Partial<NutritionLog>) => api.logNutrition(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['nutritionLogs'] });
+    },
+  });
+}
+
+export function useRecommendations(date?: string) {
+  return useQuery<Recommendations>({
+    queryKey: ['recommendations', date],
+    queryFn: () => api.getRecommendations(date) as Promise<Recommendations>,
+  });
+}
+
+export function useMorningBrief(date?: string) {
+  return useQuery<MorningBrief>({
+    queryKey: ['morningBrief', date],
+    queryFn: () => api.getMorningBrief(date) as Promise<MorningBrief>,
+  });
+}
+
+export function useCompleteAction() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ actionId, completed }: { actionId: string; completed: boolean }) => 
+      api.completeAction(actionId, completed),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
   });
 }

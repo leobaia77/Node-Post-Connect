@@ -140,6 +140,23 @@ class ApiService {
   async logNutrition(data: unknown) {
     return this.request('/api/nutrition', { method: 'POST', body: data });
   }
+
+  async getRecommendations(date?: string) {
+    const query = date ? `?date=${date}` : '';
+    return this.request(`/api/recommendations${query}`);
+  }
+
+  async getMorningBrief(date?: string) {
+    const query = date ? `?date=${date}` : '';
+    return this.request(`/api/morning-brief${query}`);
+  }
+
+  async completeAction(actionId: string, completed: boolean) {
+    return this.request('/api/recommendations/actions/complete', {
+      method: 'POST',
+      body: { actionId, completed },
+    });
+  }
 }
 
 export const api = new ApiService(API_URL);

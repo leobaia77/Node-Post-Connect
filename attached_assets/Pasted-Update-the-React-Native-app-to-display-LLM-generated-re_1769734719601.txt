@@ -1,0 +1,68 @@
+Update the React Native app to display LLM-generated recommendations.
+
+UPDATE: app/(teen-app)/home.tsx
+
+MODIFY RecommendationsCard component:
+- Fetch recommendations from API on mount
+- Handle loading state with skeleton
+- Handle "no recommendations yet" state
+- Display recommendations grouped by priority
+
+NEW COMPONENT: RecommendationItem
+Props: {
+  action: RecommendationAction
+  onToggleComplete: (id: string) => void
+  onShowWhy: (action: RecommendationAction) => void
+}
+
+Display:
+- Category icon (nutrition=fork, training=dumbbell, sleep=moon, etc.)
+- Priority indicator (high=red dot, medium=yellow, low=green)
+- Action text
+- Timing badge if present
+- Checkbox for completion
+- "Why?" button
+
+NEW COMPONENT: WhyThisModal
+- Bottom sheet modal
+- Shows:
+  - Full action detail
+  - Rationale ("why" field)
+  - Evidence citations with links
+  - How it connects to teen's selected goals
+  - "This recommendation is based on [goal] at priority [weight]"
+
+UPDATE: MorningBriefCard
+- Add "View Full Brief" expandable section
+- Show all metrics from morning brief JSON
+- Visual indicators for each metric:
+  - Sleep: hours with target comparison
+  - Training: load with trend arrow
+  - Nutrition: completeness indicator
+  - Recovery: soreness/energy visualization
+
+NEW COMPONENT: WeekFocusCard
+- Show week_focus theme
+- Key points as bullet list
+- "Why these priorities?" expandable with evidence
+
+UPDATE: NutritionGuidance display (in dedicated nutrition view or as card)
+- Protein target range prominently displayed
+- Focus foods as chips/tags
+- Meal timing suggestions
+- Tap for evidence details
+
+HANDLE ESCALATION FLAGS:
+- If escalation_flags exist, show alert banner at top of home
+- "Important: [reason]" with appropriate icon
+- Action button: "Learn More" or "Find a Professional"
+- For scoliosis-related escalations, emphasize "Please follow up with your care team"
+
+ADD: Confidence indicator
+- Small text or icon showing recommendation confidence
+- "Why can't Claude be more specific?" educational tooltip
+
+TRACK COMPLETION:
+- When teen checks off action, save to local storage
+- POST to new endpoint: POST /recommendations/:id/actions/:actionId/complete
+- Show completion progress: "3 of 5 actions completed today"
