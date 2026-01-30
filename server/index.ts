@@ -1,10 +1,13 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { serveStatic } from "./static";
 import { createServer } from "http";
+import cors from "cors";
 
 const app = express();
 const httpServer = createServer(app);
+
+// Enable CORS for mobile app connections
+app.use(cors());
 
 declare module "http" {
   interface IncomingMessage {
@@ -75,15 +78,10 @@ app.use((req, res, next) => {
     return res.status(status).json({ message });
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (process.env.NODE_ENV === "production") {
-    serveStatic(app);
-  } else {
-    const { setupVite } = await import("./vite");
-    await setupVite(httpServer, app);
-  }
+  // Add a simple health check endpoint for the mobile app
+  app.get("/", (_req, res) => {
+    res.json({ status: "ok", message: "GrowthTrack API Server" });
+  });
 
   // ALWAYS serve the app on the port specified in the environment variable PORT
   // Other ports are firewalled. Default to 5000 if not specified.

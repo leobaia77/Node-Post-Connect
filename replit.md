@@ -8,18 +8,26 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend
-- **Web App:** React 18 with TypeScript, Wouter for routing, TanStack React Query for state management, shadcn/ui with Radix UI for components, Tailwind CSS for styling (with light/dark mode), and Vite for building.
-- **Mobile App:** React Native with Expo SDK 51, Expo Router for navigation, TanStack React Query for state, expo-secure-store for authentication tokens, and @expo/vector-icons. Designed for iOS with a calming color palette and large touch targets.
+### Mobile-Only Architecture
+This project uses a **mobile-first architecture** with:
+- **Backend API:** Express.js server running on Replit (this project)
+- **Mobile App:** React Native with Expo (separate Replit project required for TestFlight publishing)
 
-### Backend
+### Backend (This Project)
 - **Framework:** Express.js with TypeScript, providing RESTful API endpoints.
 - **Authentication:** JWT-based token authentication with bcryptjs for password hashing. Role-based access control is enforced through middleware, and an invite code system links parent and teen accounts.
+- **CORS:** Enabled for cross-origin mobile app connections.
 - **Build:** esbuild for production bundling, optimized for cold start performance.
+
+### Mobile App (Separate Project)
+- **Location:** `mobile/` folder contains the React Native Expo app code
+- **Stack:** React Native with Expo SDK 51, Expo Router for navigation, TanStack React Query for state, expo-secure-store for authentication tokens, and @expo/vector-icons.
+- **Design:** iOS-focused with a calming color palette and large touch targets.
+- **Deployment:** Requires a separate Replit project for TestFlight publishing. See `mobile/README.md` for setup instructions.
 
 ### Database
 - **ORM:** Drizzle ORM with PostgreSQL dialect.
-- **Schema:** Defined in `shared/schema.ts`, shared between client and server.
+- **Schema:** Defined in `shared/schema.ts`.
 - **Migrations:** Managed with Drizzle Kit.
 - **Connection:** Node-postgres (pg) pool.
 
@@ -41,7 +49,9 @@ Preferred communication style: Simple, everyday language.
   - API endpoints: `/api/pt-routines`, `/api/pt-exercises`, `/api/pt-adherence`, `/api/brace-schedules`, `/api/brace-logs`, `/api/scoliosis-symptoms`
 
 ### Project Structure
-Organized into `client/` (React web frontend), `mobile/` (React Native Expo app), `server/` (Express backend), and `shared/` (common code including Drizzle schema).
+- `server/` - Express backend API
+- `shared/` - Common code including Drizzle schema
+- `mobile/` - React Native Expo app (to be deployed as separate Replit project)
 
 ## External Dependencies
 
@@ -53,19 +63,11 @@ Organized into `client/` (React web frontend), `mobile/` (React Native Expo app)
 - **jsonwebtoken:** For JWT token generation and verification.
 - **bcryptjs:** For secure password hashing.
 
-### UI/UX
-- **Radix UI:** Provides accessible, unstyled components.
-- **Tailwind CSS:** Utility-first CSS framework for styling.
-- **class-variance-authority:** Manages component variants.
-- **Lucide React:** Icon library.
-
 ### Data Management
-- **TanStack React Query:** Handles server state management and caching across both web and mobile clients.
 - **date-fns:** Utility library for date manipulation.
 - **Zod:** Schema validation, integrated with Drizzle.
 
 ### Build Tools
-- **Vite:** Frontend build tool for the web client.
 - **esbuild:** Used for efficient backend bundling.
 - **tsx:** TypeScript execution environment for development.
 
@@ -86,3 +88,18 @@ Organized into `client/` (React web frontend), `mobile/` (React Native Expo app)
   - Services: `mobile/services/offlineManager.ts`, hooks: `mobile/hooks/useOffline.ts`
 - **UI Components:** Production-ready components for loading states, skeleton loaders with shimmer animations, empty states (data/search/error/offline variants), and offline indicators with accessibility support. Located in `mobile/components/`.
 - **App Assets:** Generated icon.png, splash.png, adaptive-icon.png, and favicon.png in `mobile/assets/` with teal/emerald brand colors.
+
+## Deployment Guide
+
+### Backend API (This Project)
+1. Use Replit's Publishing pane to deploy this backend
+2. Copy the published URL (e.g., `https://your-project.replit.app`)
+3. This URL will be used as `EXPO_PUBLIC_API_URL` in the mobile app
+
+### Mobile App (Separate Project)
+1. Create a new Replit project using React Native/Expo template
+2. Copy contents of `mobile/` folder to the new project
+3. Create `.env` file with `EXPO_PUBLIC_API_URL=https://your-backend-url.replit.app`
+4. Install dependencies: `npm install`
+5. Publish to Expo Go first, then Publish to App Store for TestFlight
+6. See `mobile/README.md` for detailed instructions
