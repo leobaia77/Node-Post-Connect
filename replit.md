@@ -56,10 +56,17 @@ Preferred communication style: Simple, everyday language.
 ├── mobile/              # React Native Expo mobile app
 │   ├── app/             # Expo Router screens
 │   │   ├── (auth)/      # Login & register screens
-│   │   ├── (teen-onboarding)/  # Teen onboarding flow
-│   │   ├── (parent-onboarding)/ # Parent onboarding flow
-│   │   └── (tabs)/      # Main app tab screens
-│   ├── components/ui/   # Reusable UI components
+│   │   ├── (teen-onboarding)/  # Teen onboarding flow (6 steps)
+│   │   ├── (parent-onboarding)/ # Parent onboarding flow (3 steps)
+│   │   └── (teen-app)/  # Teen main app with bottom tabs
+│   │       ├── home.tsx         # Dashboard with readiness, morning brief, schedule
+│   │       ├── plan/            # Week calendar with activities
+│   │       ├── log/             # Meal, workout, PT, check-in logging
+│   │       ├── insights.tsx     # Charts and trends
+│   │       └── settings/        # Goals, sharing, connections, notifications
+│   ├── components/
+│   │   ├── ui/          # Reusable UI components (Button, Card, Input, Slider, Select)
+│   │   └── teen/        # Teen-specific components (cards, indicators)
 │   ├── hooks/           # useAuth, useApi hooks
 │   ├── services/        # API client & secure storage
 │   └── types/           # TypeScript type definitions
@@ -86,10 +93,19 @@ The mobile app is built with React Native and Expo SDK 51, designed for iOS with
 - **Icons:** @expo/vector-icons (Ionicons)
 
 ### Mobile App Screens
-1. **Auth Flow:** Login, Register with role selection
-2. **Teen Onboarding:** Age range, Goals with priority sliders, Sports, Weekly availability, Apple Health connection (Phase 2), Parent linking
-3. **Parent Onboarding:** Generate invite code, Supervision level, Guardrails configuration
-4. **Main App Tabs:** Home, Track, Insights, Profile
+1. **Auth Flow:** Login, Register with role selection (teen/parent)
+2. **Teen Onboarding (6 steps):** Age range, Goals with priority sliders, Sports, Weekly availability, Apple Health connection (Phase 2), Parent linking
+3. **Parent Onboarding (3 steps):** Generate invite code, Supervision level (Light/Moderate/Full), Guardrails configuration
+4. **Teen App Tabs (5 tabs):**
+   - **Home:** ReadinessIndicator, MorningBriefCard, TodayScheduleCard (with availability selector), RecommendationsCard
+   - **Plan:** Week calendar view, activity cards, add activity modal with type/duration/intensity
+   - **Log:** Quick action grid (Meal, Workout, PT/Brace, Check-in) with dedicated screens:
+     - Meal log: Type, photo, description, optional macros
+     - Workout log: Quick templates, workout type, sport selector (for practice/game), duration, RPE
+     - PT log: Exercise list with timer modal (play/pause, set tracking, next set, mark complete), brace tracking
+     - Check-in: Energy, soreness, mood, stress levels using icon-based indicators (no emojis), pain flag
+   - **Insights:** Sleep vs Training chart, Macro adherence, Consistency score
+   - **Settings:** Goals & priorities, Privacy & sharing controls, Health connections (Apple Health), Notifications, Account
 
 ### Running the Mobile App
 ```bash
