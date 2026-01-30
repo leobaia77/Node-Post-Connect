@@ -27,6 +27,15 @@ CRITICAL SAFETY RULES - YOU MUST NEVER:
 9. Suggest the teen hide anything from parents/guardians
 10. Override parent-set guardrails under any circumstances
 
+SCOLIOSIS-SPECIFIC SAFETY RULES (when teen has scoliosis):
+- Never suggest changing or skipping prescribed PT exercises without consulting their PT
+- Never recommend reducing brace wear time below prescribed hours
+- Never suggest any exercises that could harm their spine without PT approval
+- Always encourage following their orthotist's and PT's instructions
+- For red flag symptoms (numbness, weakness, bladder issues), escalate urgency to "immediate"
+- Be supportive about brace wear challenges without suggesting reduction in wear time
+- Acknowledge that scoliosis management takes consistency and patience
+
 IMPORTANT GUIDANCE PRINCIPLES:
 - All recommendations must cite evidence from the provided evidence library
 - Frame everything positively (what TO do, not what NOT to do)
@@ -35,7 +44,7 @@ IMPORTANT GUIDANCE PRINCIPLES:
 - Consider the full context (schedule, recovery status, upcoming events)
 - When in doubt, recommend rest/recovery over more training
 - Always recommend consulting a healthcare provider for medical concerns
-- For scoliosis support: emphasize adherence to prescribed PT and professional follow-up
+- For scoliosis support: emphasize adherence to prescribed PT and brace schedule, celebrate progress
 
 OUTPUT FORMAT: You must respond with valid JSON only, no markdown or explanation.`;
 
@@ -108,6 +117,8 @@ export interface MorningBrief {
   upcomingSchedule?: { date: string; activities: string[] }[];
   hasScoliosis?: boolean;
   ptAdherence?: { completed: number; total: number };
+  braceWear?: { targetHours: number; recentDays: { date: string; hoursWorn: number }[] };
+  scoliosisSymptoms?: { date: string; discomfortLevel: number; hasRedFlags: boolean }[];
 }
 
 export interface ValidationResult {
@@ -271,12 +282,22 @@ function buildPromptContext(brief: MorningBrief, evidence: Evidence[]): string {
   const totalTrainingMinutes = brief.recentWorkouts.reduce((sum, w) => sum + w.durationMinutes, 0);
   const trainingDays = brief.recentWorkouts.length;
 
+  const braceInfo = brief.braceWear 
+    ? `- Brace target: ${brief.braceWear.targetHours} hours/day, Recent: ${brief.braceWear.recentDays.map(d => `${d.date}: ${d.hoursWorn.toFixed(1)}h`).join(", ") || "No data"}`
+    : "";
+
+  const symptomInfo = brief.scoliosisSymptoms && brief.scoliosisSymptoms.length > 0
+    ? `- Recent symptoms: ${brief.scoliosisSymptoms.map(s => `${s.date}: Level ${s.discomfortLevel}/4${s.hasRedFlags ? " [RED FLAGS]" : ""}`).join(", ")}`
+    : "";
+
   return `
 TEEN PROFILE:
 - Goals: ${brief.goals.join(", ") || "Not specified"}
 - Sports: ${brief.sports.map(s => `${s.name} (${s.level})`).join(", ") || "None specified"}
-${brief.hasScoliosis ? "- Has scoliosis - PT exercises prescribed" : ""}
+${brief.hasScoliosis ? "- Has scoliosis - PT exercises and brace prescribed" : ""}
 ${brief.ptAdherence ? `- PT adherence: ${brief.ptAdherence.completed}/${brief.ptAdherence.total} sessions completed` : ""}
+${braceInfo}
+${symptomInfo}
 
 RECENT DATA SUMMARY (last 7 days):
 - Average sleep: ${avgSleep} hours/night
@@ -447,7 +468,7 @@ export async function getOrGenerateRecommendations(
 }
 
 export async function buildMorningBrief(teenProfileId: string, date: string): Promise<MorningBrief> {
-  const { dailyCheckins, sleepLogs, workoutLogs, nutritionLogs, ptRoutines, ptAdherenceLogs } = await import("@shared/schema");
+  const { dailyCheckins, sleepLogs, workoutLogs, nutritionLogs, ptRoutines, ptAdherenceLogs, braceSchedules, braceWearingLogs, scoliosisSymptomLogs } = await import("@shared/schema");
   const { gte, lte, desc } = await import("drizzle-orm");
   
   const endDate = new Date(date);
@@ -527,6 +548,60 @@ export async function buildMorningBrief(teenProfileId: string, date: string): Pr
     };
   }
 
+  const braceSchedule = await db
+    .select()
+    .from(braceSchedules)
+    .where(and(
+      eq(braceSchedules.teenProfileId, teenProfileId),
+      eq(braceSchedules.isActive, true)
+    ))
+    .limit(1);
+
+  let braceWear: { targetHours: number; recentDays: { date: string; hoursWorn: number }[] } | undefined;
+  if (braceSchedule.length > 0) {
+    const recentBraceLogs = await db
+      .select()
+      .from(braceWearingLogs)
+      .where(and(
+        eq(braceWearingLogs.teenProfileId, teenProfileId),
+        gte(braceWearingLogs.date, startDateStr),
+        lte(braceWearingLogs.date, date)
+      ))
+      .orderBy(desc(braceWearingLogs.date));
+
+    const braceByDate = new Map<string, number>();
+    for (const log of recentBraceLogs) {
+      if (log.durationMinutes) {
+        const existing = braceByDate.get(log.date) || 0;
+        braceByDate.set(log.date, existing + log.durationMinutes);
+      }
+    }
+
+    braceWear = {
+      targetHours: braceSchedule[0].dailyTargetHours || 16,
+      recentDays: Array.from(braceByDate.entries()).map(([d, mins]) => ({
+        date: d,
+        hoursWorn: mins / 60
+      }))
+    };
+  }
+
+  const recentSymptoms = await db
+    .select()
+    .from(scoliosisSymptomLogs)
+    .where(and(
+      eq(scoliosisSymptomLogs.teenProfileId, teenProfileId),
+      gte(scoliosisSymptomLogs.date, startDateStr),
+      lte(scoliosisSymptomLogs.date, date)
+    ))
+    .orderBy(desc(scoliosisSymptomLogs.date));
+
+  const scoliosisSymptoms = recentSymptoms.map(s => ({
+    date: s.date,
+    discomfortLevel: s.curveDiscomfortLevel || 0,
+    hasRedFlags: ((s.redFlags as string[]) || []).length > 0
+  }));
+
   const nutritionByDate = new Map<string, { calories: number; protein: number }>();
   for (const log of recentNutrition) {
     const existing = nutritionByDate.get(log.date) || { calories: 0, protein: 0 };
@@ -563,7 +638,9 @@ export async function buildMorningBrief(teenProfileId: string, date: string): Pr
       totalCalories: n.calories,
       totalProtein: n.protein
     })),
-    hasScoliosis: routines.length > 0,
-    ptAdherence
+    hasScoliosis: routines.length > 0 || braceSchedule.length > 0,
+    ptAdherence,
+    braceWear,
+    scoliosisSymptoms: scoliosisSymptoms.length > 0 ? scoliosisSymptoms : undefined
   };
 }

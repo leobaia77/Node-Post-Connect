@@ -1,0 +1,77 @@
+Prepare the app for TestFlight and App Store submission.
+
+REQUIRED ITEMS:
+
+1. Privacy Policy Screen:
+   - Accessible from Settings and onboarding
+   - Clear explanation of data collected
+   - How data is used (personalization only)
+   - EXPLICIT statement: "We never use your health data for advertising"
+   - How to delete your data
+   - Contact information
+
+2. Terms of Service Screen:
+   - Age requirement (13+)
+   - Not medical advice disclaimer
+   - Parent/guardian responsibility
+   - Acceptable use
+
+3. Data Export Feature (Settings):
+   - "Export My Data" button
+   - Generates JSON/CSV of all user data
+   - Email or download option
+
+4. Account Deletion:
+   - "Delete My Account" in Settings
+   - Confirmation flow
+   - Immediate deletion + 30-day backup
+   - Email confirmation
+
+5. Offline Support:
+   - Cache last 7 days of data
+   - Allow logging when offline
+   - Sync queue for when connection restored
+   - Clear offline indicator
+
+6. Error Handling:
+   - User-friendly error messages
+   - Retry mechanisms
+   - "Contact Support" option for persistent errors
+   - Crash reporting (Sentry or similar)
+
+7. Accessibility:
+   - VoiceOver labels on all interactive elements
+   - Dynamic type support
+   - Sufficient color contrast
+   - Reduce motion option
+
+8. Loading States:
+   - Skeleton screens
+   - Pull-to-refresh everywhere applicable
+   - Progress indicators for long operations
+
+9. Empty States:
+   - Helpful prompts when no data
+   - "Get Started" actions
+   - Illustrations
+
+10. App Icon and Splash:
+    - Professional app icon (not health-related symbols that could mislead)
+    - Splash screen with app name
+
+APP STORE METADATA TO PREPARE:
+- App name: [Your chosen name]
+- Subtitle: "Evidence-based guidance for active teens"
+- Description: Focus on education, support, NOT medical treatment
+- Keywords: teen health, sports, sleep, recovery, parent monitoring
+- Screenshots: Show teen and parent experiences
+- Age rating: 12+ (no medical treatment claims)
+- Privacy nutrition labels: Accurate based on data collected
+
+TESTFLIGHT PREP:
+- Configure TestFlight in App Store Connect
+- Internal testing group first
+- Then limited external beta
+- Feedback collection mechanism
+
+Remember: The app provides educational guidance, not medical diagnosis or treatment. All messaging must be consistent with this positioning.
