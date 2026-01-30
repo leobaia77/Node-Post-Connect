@@ -14,7 +14,7 @@ export const supervisionLevelEnum = pgEnum("supervision_level", ["summary_only",
 export const dataSourceEnum = pgEnum("data_source", ["manual", "apple_health", "other"]);
 export const workoutTypeEnum = pgEnum("workout_type", ["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other"]);
 export const mealTypeEnum = pgEnum("meal_type", ["breakfast", "lunch", "dinner", "snack"]);
-export const alertTypeEnum = pgEnum("alert_type", ["sleep_deficit", "training_spike", "pain_flag", "low_intake", "overtraining"]);
+export const alertTypeEnum = pgEnum("alert_type", ["sleep_deficit", "training_spike", "pain_flag", "low_intake", "overtraining", "low_energy", "high_stress", "restrictive_eating"]);
 export const severityEnum = pgEnum("severity", ["info", "warning", "critical"]);
 
 // Users table
@@ -34,6 +34,7 @@ export const profiles = pgTable("profiles", {
   displayName: varchar("display_name", { length: 100 }).notNull(),
   ageRange: ageRangeEnum("age_range"),
   timezone: varchar("timezone", { length: 50 }).default("America/New_York"),
+  pushToken: text("push_token"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -45,6 +46,7 @@ export const teenProfiles = pgTable("teen_profiles", {
   goalWeights: jsonb("goal_weights").$type<Record<string, number>>().default({}),
   sports: jsonb("sports").$type<{ name: string; level: string; seasonStart?: string; seasonEnd?: string }[]>().default([]),
   weeklyAvailability: jsonb("weekly_availability").$type<Record<string, string[]>>().default({}),
+  lastSafetyCheckAt: timestamp("last_safety_check_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -182,8 +184,10 @@ export const safetyAlerts = pgTable("safety_alerts", {
   alertType: alertTypeEnum("alert_type").notNull(),
   severity: severityEnum("severity").notNull(),
   message: text("message").notNull(),
+  shareWithParent: boolean("share_with_parent").default(true),
   acknowledgedByTeen: boolean("acknowledged_by_teen").default(false),
   acknowledgedByParent: boolean("acknowledged_by_parent").default(false),
+  resourceLink: text("resource_link"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

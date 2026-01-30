@@ -1,0 +1,78 @@
+Add a rule-based safety alert system to the backend. This runs WITHOUT the LLM - pure logic.
+
+CREATE NEW FILE: services/safetyRules.ts
+
+SAFETY RULES TO IMPLEMENT:
+
+1. Sleep Deficit Detection:
+   - Trigger: 3+ consecutive nights below minimum sleep target
+   - Severity: Warning
+   - Message: "Sleep has been below [X] hours for [N] nights. Adequate sleep (8-10 hours) is essential for teen development and recovery."
+   - Parent alert: Yes
+
+2. Sudden Training Spike:
+   - Trigger: Weekly training minutes > 150% of 4-week average
+   - Severity: Warning
+   - Message: "Training volume increased significantly this week. Consider gradual progression to reduce injury risk."
+   - Parent alert: Yes
+
+3. Pain Flag Alert:
+   - Trigger: has_pain_flag = true on daily checkin
+   - Severity: Info (single), Warning (3+ in 7 days)
+   - Message: "Pain has been reported [N] times recently. If pain persists, consider consulting a healthcare provider."
+   - Parent alert: Yes if recurring
+
+4. Very Low Energy Pattern:
+   - Trigger: energy_level ≤ 2 for 3+ days in a row
+   - Severity: Warning
+   - Message: "Energy levels have been low. This could indicate inadequate recovery, nutrition, or sleep."
+   - Parent alert: Yes
+
+5. High Stress Pattern:
+   - Trigger: stress_level ≥ 4 for 5+ days in 7-day window
+   - Severity: Info
+   - Message: "Stress has been elevated recently. Consider recovery activities and ensure adequate rest."
+   - Parent alert: No (privacy)
+
+6. Signs of Restrictive Eating (CRITICAL):
+   - Trigger: Combination of:
+     * Very low calorie intake logged (< 1200 for multiple days) AND
+     * High training volume AND
+     * Weight loss goal attempted (if we track this)
+   - Severity: Critical
+   - Message: "Eating patterns and training may need attention. Adequate nutrition is essential for teen health and development. Consider speaking with a healthcare provider or registered dietitian."
+   - Parent alert: Yes
+   - Additional: Include resource link for eating disorder support
+
+7. Overtraining Indicators:
+   - Trigger: Combination of:
+     * High training load (>150% normal) AND
+     * Low energy (≤ 2) AND
+     * High soreness (≥ 4)
+   - Severity: Warning
+   - Message: "Signs suggest possible overtraining. Consider a recovery day or reduced intensity."
+   - Parent alert: Yes
+
+CREATE: services/safetyChecker.ts
+- Function: runSafetyChecks(teenProfileId: string, date: Date)
+- Queries recent data for each rule
+- Creates safety_alerts records when triggered
+- Avoids duplicate alerts (check if similar alert exists in last 24h)
+- Returns array of new alerts created
+
+CREATE: Background job (cron or scheduled function)
+- Runs daily at configurable time (default 8am teen's timezone)
+- Calls runSafetyChecks for all active teen profiles
+- Sends push notifications for new alerts
+
+API ENDPOINTS:
+- GET /safety-alerts - list alerts for current user
+- PUT /safety-alerts/:id/acknowledge - mark as acknowledged
+- GET /parent/alerts - parent sees alerts based on sharing settings
+
+IMPORTANT SAFETY NOTES (add as code comments):
+- Never use shame-based language
+- Always frame as supportive, not punitive
+- Include "consult a professional" messaging for health concerns
+- The app provides guidance, not medical diagnosis
+- Respect teen privacy for certain alerts (stress, mood)

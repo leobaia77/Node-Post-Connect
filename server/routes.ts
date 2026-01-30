@@ -633,6 +633,155 @@ export async function registerRoutes(
     }
   });
 
+  // SAFETY ALERTS ROUTES
+  
+  // Get alerts for current teen user
+  app.get("/api/safety-alerts", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) {
+        return res.status(404).json({ error: "Teen profile not found" });
+      }
+
+      const alerts = await storage.getSafetyAlerts(teenProfile.id);
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching safety alerts:", error);
+      res.status(500).json({ error: "Failed to get safety alerts" });
+    }
+  });
+
+  // Acknowledge an alert (teen)
+  app.put("/api/safety-alerts/:id/acknowledge", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const alert = await storage.getAlertById(id);
+      
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile || teenProfile.id !== alert.teenProfileId) {
+        return res.status(403).json({ error: "Not authorized to acknowledge this alert" });
+      }
+
+      const updated = await storage.acknowledgeAlert(id, true, false);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error acknowledging alert:", error);
+      res.status(500).json({ error: "Failed to acknowledge alert" });
+    }
+  });
+
+  // Get alerts for parent (only alerts marked as shareWithParent)
+  app.get("/api/parent/alerts", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
+    try {
+      const links = await storage.getLinksByParent(req.user!.userId);
+      const allAlerts = [];
+
+      for (const link of links) {
+        if (link.status !== "active" || !link.teenUserId) continue;
+
+        const profile = await storage.getProfile(link.teenUserId);
+        if (!profile) continue;
+
+        const teenProfile = await storage.getTeenProfile(profile.id);
+        if (!teenProfile) continue;
+
+        const alerts = await storage.getParentVisibleAlerts(teenProfile.id);
+        allAlerts.push(...alerts.map(alert => ({
+          ...alert,
+          teenName: profile.displayName,
+          teenProfileId: teenProfile.id,
+        })));
+      }
+
+      // Sort by createdAt descending
+      allAlerts.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+
+      res.json(allAlerts);
+    } catch (error) {
+      console.error("Error fetching parent alerts:", error);
+      res.status(500).json({ error: "Failed to get parent alerts" });
+    }
+  });
+
+  // Parent acknowledges an alert
+  app.put("/api/parent/alerts/:id/acknowledge", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const alert = await storage.getAlertById(id);
+      
+      if (!alert) {
+        return res.status(404).json({ error: "Alert not found" });
+      }
+
+      // Verify parent has access to this teen's alerts
+      const links = await storage.getLinksByParent(req.user!.userId);
+      let hasAccess = false;
+
+      for (const link of links) {
+        if (link.status !== "active" || !link.teenUserId) continue;
+        const profile = await storage.getProfile(link.teenUserId);
+        if (!profile) continue;
+        const teenProfile = await storage.getTeenProfile(profile.id);
+        if (teenProfile && teenProfile.id === alert.teenProfileId) {
+          hasAccess = true;
+          break;
+        }
+      }
+
+      if (!hasAccess) {
+        return res.status(403).json({ error: "Not authorized to acknowledge this alert" });
+      }
+
+      const updated = await storage.acknowledgeAlert(id, false, true);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error acknowledging parent alert:", error);
+      res.status(500).json({ error: "Failed to acknowledge alert" });
+    }
+  });
+
+  // Trigger safety check for a teen (for testing/manual trigger)
+  app.post("/api/safety-check", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) {
+        return res.status(404).json({ error: "Teen profile not found" });
+      }
+
+      const { runSafetyChecks } = await import("./services/safetyChecker");
+      const alerts = await runSafetyChecks(teenProfile.id);
+      
+      res.json({ 
+        message: `Safety check complete. ${alerts.length} new alert(s) created.`,
+        alerts 
+      });
+    } catch (error) {
+      console.error("Error running safety check:", error);
+      res.status(500).json({ error: "Failed to run safety check" });
+    }
+  });
+
   // PARENT DASHBOARD ROUTE
   app.get("/api/parent/dashboard", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
     try {
@@ -678,6 +827,28 @@ export async function registerRoutes(
       res.json(dashboard);
     } catch (error) {
       res.status(500).json({ error: "Failed to get parent dashboard" });
+    }
+  });
+
+  // PUSH TOKEN REGISTRATION
+  app.post("/api/push-token", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { pushToken } = req.body;
+      
+      if (!pushToken || typeof pushToken !== "string") {
+        return res.status(400).json({ error: "Push token is required" });
+      }
+
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const updated = await storage.updateProfile(req.user!.userId, { pushToken });
+      res.json({ message: "Push token registered successfully", profile: updated });
+    } catch (error) {
+      console.error("Error registering push token:", error);
+      res.status(500).json({ error: "Failed to register push token" });
     }
   });
 

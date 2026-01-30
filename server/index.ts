@@ -96,8 +96,21 @@ app.use((req, res, next) => {
       host: "0.0.0.0",
       reusePort: true,
     },
-    () => {
+    async () => {
       log(`serving on port ${port}`);
+      
+      // Start safety check scheduler if enabled via env var
+      // Default: enabled in production, disabled in development
+      const enableScheduler = process.env.ENABLE_SAFETY_SCHEDULER === "true" || 
+                              process.env.NODE_ENV === "production";
+      const schedulerTargetHour = parseInt(process.env.SAFETY_CHECK_HOUR || "8", 10);
+      const schedulerTimezone = process.env.SAFETY_CHECK_TIMEZONE || "America/New_York";
+      
+      if (enableScheduler) {
+        const { startSafetyCheckScheduler } = await import("./services/safetyChecker");
+        startSafetyCheckScheduler(schedulerTargetHour, schedulerTimezone);
+        log(`Safety check scheduler started (daily at ${schedulerTargetHour}:00 ${schedulerTimezone})`);
+      }
     },
   );
 })();

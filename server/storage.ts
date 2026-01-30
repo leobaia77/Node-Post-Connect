@@ -88,6 +88,8 @@ export interface IStorage {
   // Safety Alerts
   getSafetyAlerts(teenProfileId: string): Promise<SafetyAlert[]>;
   getUnacknowledgedAlerts(teenProfileId: string): Promise<SafetyAlert[]>;
+  getParentVisibleAlerts(teenProfileId: string): Promise<SafetyAlert[]>;
+  getAlertById(id: string): Promise<SafetyAlert | undefined>;
   createSafetyAlert(data: InsertSafetyAlert): Promise<SafetyAlert>;
   acknowledgeAlert(id: string, byTeen: boolean, byParent: boolean): Promise<SafetyAlert | undefined>;
 }
@@ -345,6 +347,22 @@ export class DatabaseStorage implements IStorage {
 
   async createSafetyAlert(data: InsertSafetyAlert): Promise<SafetyAlert> {
     const result = await db.insert(safetyAlerts).values(data).returning();
+    return result[0];
+  }
+
+  async getParentVisibleAlerts(teenProfileId: string): Promise<SafetyAlert[]> {
+    return db.select().from(safetyAlerts)
+      .where(and(
+        eq(safetyAlerts.teenProfileId, teenProfileId),
+        eq(safetyAlerts.shareWithParent, true)
+      ))
+      .orderBy(desc(safetyAlerts.createdAt));
+  }
+
+  async getAlertById(id: string): Promise<SafetyAlert | undefined> {
+    const result = await db.select().from(safetyAlerts)
+      .where(eq(safetyAlerts.id, id))
+      .limit(1);
     return result[0];
   }
 
