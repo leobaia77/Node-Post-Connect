@@ -107,6 +107,12 @@ The mobile app is built with React Native and Expo SDK 51, designed for iOS with
    - **Insights:** Sleep vs Training chart, Macro adherence, Consistency score
    - **Settings:** Goals & priorities, Privacy & sharing controls, Health connections (Apple Health), Notifications, Account
 
+5. **Parent App Tabs (4 tabs):**
+   - **Overview:** TeenStatusCard (status indicators with privacy gating), WeeklySummaryCard (sleep/training/nutrition metrics), AtRiskIndicators (areas to discuss), GuardrailsStatusCard
+   - **Trends:** Date range selector (7/14/30 days), Sleep trend chart, Training load chart, Check-in trends (with consent gating for detailed vs limited view)
+   - **Alerts:** Filterable alert list (All/Sleep/Training/Pain/Mood), severity color coding (info/warning/critical), suggested actions, acknowledgment workflow
+   - **Settings:** Supervision levels (Light/Moderate/Full), Safety guardrails (max training, min sleep, no weight-loss mode, alert thresholds), Notification preferences, Account management
+
 ### Running the Mobile App
 ```bash
 cd mobile
