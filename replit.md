@@ -192,3 +192,47 @@ The safety alert system monitors teen health data and generates supportive alert
 - Uses Expo Push API for real notifications
 - Sends to teen and linked parents (respecting shareWithParent)
 - Push tokens stored in profiles.pushToken field
+
+## Evidence Library (RAG for Recommendations)
+
+### Overview
+The evidence library provides research-backed health recommendations for the LLM to reference when generating personalized guidance. All recommendations cite authoritative sources.
+
+### Location
+- Data: `server/data/evidence-library.json`
+- Service: `server/services/evidenceLibrary.ts`
+
+### Evidence Categories
+- **sleep**: Teen sleep requirements, consistency, screen time, growth hormone
+- **nutrition**: Calories, protein, calcium, Vitamin D, meal timing, hydration
+- **training**: Daily activity, resistance training, overtraining, rest days, warmup
+- **bone_health**: Weight-bearing exercise, nutrition triad
+- **scoliosis**: PT exercises, adherence, when to consult provider
+
+### Service Functions
+- `searchEvidence(query)`: Find evidence by goals, categories, or conditions
+- `getEvidenceById(id)`: Get specific evidence entry
+- `getEvidenceByCategory(category)`: Get all evidence for a category
+- `getEvidenceByGoal(goal)`: Get evidence applicable to a goal
+- `getRecommendationForCondition(condition, variables)`: Get templated recommendation
+- `formatEvidenceForLLM(evidence)`: Format evidence for LLM context
+
+### Evidence Structure
+```json
+{
+  "id": "sleep-teens-001",
+  "category": "sleep",
+  "title": "Teen Sleep Requirements",
+  "summary": "Research summary...",
+  "source": "CDC",
+  "source_url": "https://...",
+  "applicable_goals": ["growth", "muscle"],
+  "recommendation_templates": [
+    {
+      "condition": "sleep_below_8_hours",
+      "action": "Aim for bedtime by {calculated_bedtime}...",
+      "priority": "high"
+    }
+  ]
+}
+```

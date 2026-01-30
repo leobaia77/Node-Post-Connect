@@ -1,0 +1,65 @@
+Create the evidence library that the LLM will reference for all recommendations.
+
+CREATE: services/evidenceLibrary.ts
+
+EVIDENCE STRUCTURE:
+{
+  "id": "sleep-teens-001",
+  "category": "sleep",
+  "title": "Teen Sleep Requirements",
+  "summary": "Teenagers aged 13-18 need 8-10 hours of sleep per night for optimal health and development.",
+  "source": "CDC",
+  "source_url": "https://www.cdc.gov/sleep/about_sleep/how_much_sleep.html",
+  "applicable_goals": ["growth", "muscle", "bone_health", "athletic_performance"],
+  "recommendation_templates": [
+    {
+      "condition": "sleep_below_8_hours",
+      "action": "Aim for bedtime by {calculated_bedtime} to get {target_hours} hours of sleep.",
+      "priority": "high"
+    }
+  ]
+}
+
+CREATE EVIDENCE ENTRIES (embed as JSON file or database seed):
+
+SLEEP EVIDENCE:
+- sleep-teens-001: 8-10 hours requirement (CDC)
+- sleep-teens-002: Consistent bedtime benefits
+- sleep-teens-003: Screen time and sleep quality
+- sleep-teens-004: Sleep and growth hormone
+- sleep-athletes-001: Sleep and athletic performance/recovery
+
+NUTRITION EVIDENCE:
+- nutrition-teens-001: Caloric needs vary by activity (general guidance)
+- nutrition-protein-001: Protein needs for active teens (approx 1.2-1.6g/kg)
+- nutrition-calcium-001: Calcium needs ~1300mg/day (NICHD)
+- nutrition-vitd-001: Vitamin D RDA ~600 IU/day
+- nutrition-timing-001: Pre/post workout nutrition timing
+- nutrition-hydration-001: Hydration guidelines
+
+TRAINING EVIDENCE:
+- training-youth-001: 60 min/day activity recommendation (CDC)
+- training-resistance-001: Youth resistance training safety (AAP)
+- training-overtraining-001: Signs of overtraining and recovery needs
+- training-periodization-001: Rest day importance
+- training-warmup-001: Injury prevention through warmup
+
+BONE HEALTH EVIDENCE:
+- bone-activity-001: Weight-bearing exercise benefits
+- bone-nutrition-001: Calcium + Vitamin D + protein needs
+
+SCOLIOSIS EVIDENCE:
+- scoliosis-exercise-001: Scoliosis-specific exercises as adjunctive support (Cochrane)
+- scoliosis-pt-001: Importance of PT adherence
+- scoliosis-professional-001: When to consult healthcare provider
+
+FUNCTION: searchEvidence(query: {
+  goals: string[],
+  categories: string[],
+  condition?: string
+}): Evidence[]
+- Returns relevant evidence entries for RAG
+
+CREATE FILE: data/evidence-library.json
+- Seed all evidence entries
+- Include full citations and URLs

@@ -1,0 +1,355 @@
+{
+  "evidence": [
+    {
+      "id": "sleep-teens-001",
+      "category": "sleep",
+      "title": "Teen Sleep Requirements",
+      "summary": "Teenagers aged 13-18 need 8-10 hours of sleep per night for optimal health and development.",
+      "source": "CDC",
+      "source_url": "https://www.cdc.gov/sleep/about_sleep/how_much_sleep.html",
+      "applicable_goals": ["growth", "muscle", "bone_health", "athletic_performance"],
+      "recommendation_templates": [
+        {
+          "condition": "sleep_below_8_hours",
+          "action": "Aim for bedtime by {calculated_bedtime} to get {target_hours} hours of sleep.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "sleep-teens-002",
+      "category": "sleep",
+      "title": "Consistent Bedtime Benefits",
+      "summary": "Maintaining a consistent sleep schedule, even on weekends, helps regulate the body's internal clock and improves sleep quality.",
+      "source": "Sleep Foundation",
+      "source_url": "https://www.sleepfoundation.org/teens-and-sleep",
+      "applicable_goals": ["growth", "athletic_performance", "recovery"],
+      "recommendation_templates": [
+        {
+          "condition": "irregular_sleep_schedule",
+          "action": "Try to go to bed and wake up at the same time each day, even on weekends.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "sleep-teens-003",
+      "category": "sleep",
+      "title": "Screen Time and Sleep Quality",
+      "summary": "Blue light from screens can suppress melatonin production and delay sleep onset. Limiting screens 1 hour before bed improves sleep quality.",
+      "source": "AAP",
+      "source_url": "https://www.aap.org/en/patient-care/media-and-children/",
+      "applicable_goals": ["growth", "recovery", "athletic_performance"],
+      "recommendation_templates": [
+        {
+          "condition": "screen_before_bed",
+          "action": "Put away phones and screens at least 1 hour before bedtime to help your body prepare for sleep.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "sleep-teens-004",
+      "category": "sleep",
+      "title": "Sleep and Growth Hormone",
+      "summary": "Growth hormone is primarily released during deep sleep. Adequate sleep is essential for physical development during adolescence.",
+      "source": "Endocrine Society",
+      "source_url": "https://www.endocrine.org/patient-engagement/endocrine-library/hormones-and-endocrine-function/growth-hormone",
+      "applicable_goals": ["growth", "muscle", "bone_health"],
+      "recommendation_templates": [
+        {
+          "condition": "growth_goal_active",
+          "action": "Prioritize getting 8-10 hours of sleep to support your growth and development goals.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "sleep-athletes-001",
+      "category": "sleep",
+      "title": "Sleep and Athletic Performance",
+      "summary": "Athletes who sleep less than 8 hours have 1.7x higher injury risk. Sleep improves reaction time, accuracy, and recovery.",
+      "source": "British Journal of Sports Medicine",
+      "source_url": "https://bjsm.bmj.com/content/48/17/1340",
+      "applicable_goals": ["athletic_performance", "recovery", "injury_prevention"],
+      "recommendation_templates": [
+        {
+          "condition": "athlete_sleep_deficit",
+          "action": "Athletes need 8-10 hours of sleep for peak performance. Consider an earlier bedtime on training days.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "nutrition-teens-001",
+      "category": "nutrition",
+      "title": "Caloric Needs for Active Teens",
+      "summary": "Active teen athletes may need 2,200-3,200 calories per day depending on age, sex, and activity level. Undereating can impair growth and performance.",
+      "source": "Academy of Nutrition and Dietetics",
+      "source_url": "https://www.eatright.org/fitness/sports-and-performance/fueling-your-workout/feeding-young-athletes",
+      "applicable_goals": ["athletic_performance", "muscle", "growth"],
+      "recommendation_templates": [
+        {
+          "condition": "low_calorie_intake",
+          "action": "Your body needs adequate fuel for training and growth. Consider adding nutritious snacks between meals.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "nutrition-protein-001",
+      "category": "nutrition",
+      "title": "Protein Needs for Active Teens",
+      "summary": "Active teenagers need approximately 1.2-1.6g of protein per kg of body weight daily to support muscle growth and recovery.",
+      "source": "International Society of Sports Nutrition",
+      "source_url": "https://jissn.biomedcentral.com/articles/10.1186/s12970-017-0177-8",
+      "applicable_goals": ["muscle", "athletic_performance", "recovery"],
+      "recommendation_templates": [
+        {
+          "condition": "low_protein_intake",
+          "action": "Include protein at each meal. Good sources include chicken, fish, eggs, dairy, beans, and nuts.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "nutrition-calcium-001",
+      "category": "nutrition",
+      "title": "Calcium for Bone Health",
+      "summary": "Teens need approximately 1300mg of calcium per day to support bone development. This is especially important during growth spurts.",
+      "source": "NICHD",
+      "source_url": "https://www.nichd.nih.gov/health/topics/bonehealth/conditioninfo/calcium",
+      "applicable_goals": ["bone_health", "growth", "injury_prevention"],
+      "recommendation_templates": [
+        {
+          "condition": "bone_health_goal",
+          "action": "Aim for 3-4 servings of calcium-rich foods daily: milk, yogurt, cheese, fortified foods, or leafy greens.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "nutrition-vitd-001",
+      "category": "nutrition",
+      "title": "Vitamin D Requirements",
+      "summary": "Teens need approximately 600 IU of Vitamin D daily for calcium absorption and bone health. Sunlight and fortified foods are key sources.",
+      "source": "NIH Office of Dietary Supplements",
+      "source_url": "https://ods.od.nih.gov/factsheets/VitaminD-Consumer/",
+      "applicable_goals": ["bone_health", "growth", "injury_prevention"],
+      "recommendation_templates": [
+        {
+          "condition": "bone_health_goal",
+          "action": "Get some sunlight daily and include Vitamin D sources like fortified milk, fatty fish, or eggs.",
+          "priority": "low"
+        }
+      ]
+    },
+    {
+      "id": "nutrition-timing-001",
+      "category": "nutrition",
+      "title": "Pre and Post Workout Nutrition",
+      "summary": "Eating carbohydrates 1-2 hours before exercise and protein within 30 minutes after supports performance and recovery.",
+      "source": "ACSM",
+      "source_url": "https://www.acsm.org/education-resources/trending-topics-resources/resource-library/resource_detail?id=3fa48b27-2b6e-4b3f-b249-8e6f20b0d8ea",
+      "applicable_goals": ["athletic_performance", "muscle", "recovery"],
+      "recommendation_templates": [
+        {
+          "condition": "pre_workout_meal",
+          "action": "Have a carb-rich snack like a banana or toast 1-2 hours before your workout for energy.",
+          "priority": "medium"
+        },
+        {
+          "condition": "post_workout_meal",
+          "action": "Eat a snack with protein and carbs within 30 minutes after training to support recovery.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "nutrition-hydration-001",
+      "category": "nutrition",
+      "title": "Hydration Guidelines",
+      "summary": "Teen athletes should drink water before, during, and after exercise. A general guideline is 16-20 oz 2-3 hours before, and 7-10 oz every 10-20 minutes during activity.",
+      "source": "ACSM",
+      "source_url": "https://www.acsm.org/blog-detail/acsm-certified-blog/2020/05/14/hydration-for-athletes",
+      "applicable_goals": ["athletic_performance", "recovery"],
+      "recommendation_templates": [
+        {
+          "condition": "dehydration_risk",
+          "action": "Drink water throughout the day. Bring a water bottle to practice and take sips every 15-20 minutes.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "training-youth-001",
+      "category": "training",
+      "title": "Daily Activity Recommendation",
+      "summary": "Children and adolescents should get at least 60 minutes of moderate-to-vigorous physical activity daily.",
+      "source": "CDC",
+      "source_url": "https://www.cdc.gov/physical-activity-basics/guidelines/children-and-adolescents.html",
+      "applicable_goals": ["athletic_performance", "growth", "bone_health"],
+      "recommendation_templates": [
+        {
+          "condition": "low_activity",
+          "action": "Aim for at least 60 minutes of physical activity each day. This can include sports, walking, or active play.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "training-resistance-001",
+      "category": "training",
+      "title": "Youth Resistance Training Safety",
+      "summary": "Resistance training is safe and beneficial for teens when properly supervised. Focus on technique over heavy weights, with 2-3 sessions per week.",
+      "source": "AAP",
+      "source_url": "https://publications.aap.org/pediatrics/article/145/6/e20201011/76942/Resistance-Training-for-Children-and-Adolescents",
+      "applicable_goals": ["muscle", "athletic_performance", "bone_health"],
+      "recommendation_templates": [
+        {
+          "condition": "strength_training",
+          "action": "Focus on learning proper form with lighter weights. Increase weight gradually as your technique improves.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "training-overtraining-001",
+      "category": "training",
+      "title": "Signs of Overtraining",
+      "summary": "Overtraining can lead to fatigue, decreased performance, mood changes, and increased injury risk. Rest and recovery are essential parts of training.",
+      "source": "ACSM",
+      "source_url": "https://www.acsm.org/education-resources/trending-topics-resources/resource-library",
+      "applicable_goals": ["athletic_performance", "recovery", "injury_prevention"],
+      "recommendation_templates": [
+        {
+          "condition": "overtraining_signs",
+          "action": "Your body may need extra recovery time. Consider reducing intensity or taking an extra rest day this week.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "training-periodization-001",
+      "category": "training",
+      "title": "Rest Day Importance",
+      "summary": "Rest days allow muscles to repair and grow stronger. Teen athletes should have at least 1-2 rest days per week.",
+      "source": "NSCA",
+      "source_url": "https://www.nsca.com/education/articles/kinetic-select/importance-of-rest-and-recovery-for-athletes/",
+      "applicable_goals": ["recovery", "muscle", "athletic_performance"],
+      "recommendation_templates": [
+        {
+          "condition": "no_rest_days",
+          "action": "Schedule at least 1-2 rest days per week. Your muscles grow stronger during rest, not just during training.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "training-warmup-001",
+      "category": "training",
+      "title": "Injury Prevention Through Warmup",
+      "summary": "A proper warmup of 10-15 minutes increases blood flow, raises muscle temperature, and reduces injury risk by up to 50%.",
+      "source": "British Journal of Sports Medicine",
+      "source_url": "https://bjsm.bmj.com/content/49/16/1066",
+      "applicable_goals": ["injury_prevention", "athletic_performance"],
+      "recommendation_templates": [
+        {
+          "condition": "pre_workout",
+          "action": "Start with a 10-15 minute dynamic warmup including light jogging and movement-specific stretches.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "bone-activity-001",
+      "category": "bone_health",
+      "title": "Weight-Bearing Exercise Benefits",
+      "summary": "Weight-bearing exercises like running, jumping, and sports stimulate bone growth and increase bone density during adolescence.",
+      "source": "NIH",
+      "source_url": "https://www.bones.nih.gov/health-info/bone/bone-health/exercise/exercise-your-bone-health",
+      "applicable_goals": ["bone_health", "growth"],
+      "recommendation_templates": [
+        {
+          "condition": "bone_health_goal",
+          "action": "Include weight-bearing activities like running, basketball, or jumping exercises to strengthen your bones.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "bone-nutrition-001",
+      "category": "bone_health",
+      "title": "Bone Health Nutrition Triad",
+      "summary": "Optimal bone health requires adequate calcium (1300mg), Vitamin D (600 IU), and protein intake combined with weight-bearing exercise.",
+      "source": "ASBMR",
+      "source_url": "https://www.asbmr.org/",
+      "applicable_goals": ["bone_health", "growth"],
+      "recommendation_templates": [
+        {
+          "condition": "bone_health_goal",
+          "action": "Focus on the bone health triad: calcium-rich foods, Vitamin D exposure, and weight-bearing exercise.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "scoliosis-exercise-001",
+      "category": "scoliosis",
+      "title": "Scoliosis-Specific Exercises",
+      "summary": "Scoliosis-specific exercises (SSE) may help as an adjunctive treatment to slow curve progression in mild-to-moderate adolescent scoliosis.",
+      "source": "Cochrane Library",
+      "source_url": "https://www.cochranelibrary.com/cdsr/doi/10.1002/14651858.CD007837.pub2/full",
+      "applicable_goals": ["scoliosis_management", "injury_prevention"],
+      "recommendation_templates": [
+        {
+          "condition": "scoliosis_diagnosed",
+          "action": "Continue with your prescribed PT exercises regularly. Consistency is key for best results.",
+          "priority": "high"
+        }
+      ]
+    },
+    {
+      "id": "scoliosis-pt-001",
+      "category": "scoliosis",
+      "title": "PT Adherence Importance",
+      "summary": "Regular adherence to physical therapy exercises is associated with better outcomes in scoliosis management. Consistency matters more than intensity.",
+      "source": "Spine Journal",
+      "source_url": "https://www.thespinejournalonline.com/",
+      "applicable_goals": ["scoliosis_management"],
+      "recommendation_templates": [
+        {
+          "condition": "pt_exercises_assigned",
+          "action": "Try to complete your PT exercises daily. Even 10-15 minutes of consistent practice makes a difference.",
+          "priority": "high"
+        },
+        {
+          "condition": "pt_missed_days",
+          "action": "Getting back on track with PT exercises is more important than making up missed days. Start fresh today.",
+          "priority": "medium"
+        }
+      ]
+    },
+    {
+      "id": "scoliosis-professional-001",
+      "category": "scoliosis",
+      "title": "When to Consult Healthcare Provider",
+      "summary": "Consult a healthcare provider if experiencing new pain, significant posture changes, or if prescribed brace or exercises feel uncomfortable.",
+      "source": "SRS (Scoliosis Research Society)",
+      "source_url": "https://www.srs.org/patients-and-families",
+      "applicable_goals": ["scoliosis_management"],
+      "recommendation_templates": [
+        {
+          "condition": "scoliosis_pain",
+          "action": "If you're experiencing new or increased back pain, it's a good idea to check in with your healthcare provider.",
+          "priority": "high"
+        },
+        {
+          "condition": "brace_discomfort",
+          "action": "If your brace is causing discomfort, contact your orthotist. Adjustments can make a big difference.",
+          "priority": "medium"
+        }
+      ]
+    }
+  ]
+}
