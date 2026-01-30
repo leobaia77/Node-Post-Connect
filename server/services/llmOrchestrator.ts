@@ -283,7 +283,7 @@ function buildPromptContext(brief: MorningBrief, evidence: Evidence[]): string {
   const trainingDays = brief.recentWorkouts.length;
 
   const braceInfo = brief.braceWear 
-    ? `- Brace target: ${brief.braceWear.targetHours} hours/day, Recent: ${brief.braceWear.recentDays.map(d => `${d.date}: ${d.hoursWorn.toFixed(1)}h`).join(", ") || "No data"}`
+    ? `- Brace target: ${brief.braceWear.targetHours} hours/day, Recent: ${brief.braceWear.recentDays.length > 0 ? brief.braceWear.recentDays.map(d => `${d.date}: ${d.hoursWorn.toFixed(1)}h`).join(", ") : "No logs yet"}`
     : "";
 
   const symptomInfo = brief.scoliosisSymptoms && brief.scoliosisSymptoms.length > 0
@@ -579,10 +579,12 @@ export async function buildMorningBrief(teenProfileId: string, date: string): Pr
 
     braceWear = {
       targetHours: braceSchedule[0].dailyTargetHours || 16,
-      recentDays: Array.from(braceByDate.entries()).map(([d, mins]) => ({
-        date: d,
-        hoursWorn: mins / 60
-      }))
+      recentDays: Array.from(braceByDate.entries())
+        .map(([d, mins]) => ({
+          date: d,
+          hoursWorn: mins / 60
+        }))
+        .sort((a, b) => b.date.localeCompare(a.date))
     };
   }
 
