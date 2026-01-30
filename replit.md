@@ -48,11 +48,21 @@ Preferred communication style: Simple, everyday language.
 
 ### Project Structure
 ```
-├── client/src/          # React frontend
+├── client/src/          # React web frontend
 │   ├── components/      # UI components (shadcn + custom)
 │   ├── pages/           # Route pages
 │   ├── lib/             # Utilities (auth, queryClient)
 │   └── hooks/           # Custom React hooks
+├── mobile/              # React Native Expo mobile app
+│   ├── app/             # Expo Router screens
+│   │   ├── (auth)/      # Login & register screens
+│   │   ├── (teen-onboarding)/  # Teen onboarding flow
+│   │   ├── (parent-onboarding)/ # Parent onboarding flow
+│   │   └── (tabs)/      # Main app tab screens
+│   ├── components/ui/   # Reusable UI components
+│   ├── hooks/           # useAuth, useApi hooks
+│   ├── services/        # API client & secure storage
+│   └── types/           # TypeScript type definitions
 ├── server/              # Express backend
 │   ├── routes.ts        # API route definitions
 │   ├── storage.ts       # Database operations
@@ -62,6 +72,34 @@ Preferred communication style: Simple, everyday language.
 │   └── schema.ts        # Drizzle schema + Zod validation
 └── migrations/          # Database migrations
 ```
+
+## Mobile App (React Native Expo)
+
+### Overview
+The mobile app is built with React Native and Expo SDK 51, designed for iOS with a calming color palette (soft greens, blues, whites) and large touch targets for teen usability.
+
+### Tech Stack
+- **Framework:** React Native with Expo SDK 51
+- **Navigation:** Expo Router (file-based routing)
+- **State Management:** TanStack React Query
+- **Storage:** expo-secure-store for auth tokens
+- **Icons:** @expo/vector-icons (Ionicons)
+
+### Mobile App Screens
+1. **Auth Flow:** Login, Register with role selection
+2. **Teen Onboarding:** Age range, Goals with priority sliders, Sports, Weekly availability, Apple Health connection (Phase 2), Parent linking
+3. **Parent Onboarding:** Generate invite code, Supervision level, Guardrails configuration
+4. **Main App Tabs:** Home, Track, Insights, Profile
+
+### Running the Mobile App
+```bash
+cd mobile
+npm install
+npx expo start
+```
+
+### Environment Variables (Mobile)
+- `EXPO_PUBLIC_API_URL`: Backend API URL (defaults to http://localhost:5000)
 
 ## External Dependencies
 
