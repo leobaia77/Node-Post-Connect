@@ -1,0 +1,69 @@
+Continue the React Native Expo app. Create the parent experience.
+
+NAVIGATION (app/(parent-app)/_layout.tsx):
+Bottom tabs: Overview, Trends, Alerts, Settings
+
+OVERVIEW TAB (app/(parent-app)/overview.tsx):
+Components:
+1. TeenStatusCard:
+   - Teen's name and avatar
+   - Last active time
+   - Quick status indicators (sleep, activity, mood)
+   - Respects teen's sharing preferences
+
+2. WeeklySummaryCard:
+   - Sleep trend (average hours, consistency %)
+   - Training trend (total minutes, session count)
+   - Nutrition adherence (meals logged %)
+   - All shown at appropriate detail level based on supervision setting
+
+3. AtRiskIndicators:
+   - Warning badges if any:
+     * Sleep deficit (avg < min target)
+     * Training overload (spike detected)
+     * Pain flags (recurring pain noted)
+   - Each links to Alerts tab
+
+4. GuardrailsStatusCard:
+   - Show current guardrails
+   - Compliance status for each
+   - "Edit Guardrails" button
+
+TRENDS TAB (app/(parent-app)/trends.tsx):
+- Date range selector (7 days, 14 days, 30 days)
+- Charts (respecting sharing preferences):
+  1. Sleep Trend: Line chart of hours/night with min target line
+  2. Training Load: Bar chart of weekly minutes
+  3. Check-in Trends: Mood/energy/stress over time
+- "Detailed view" only if teen allows detailed sharing
+
+ALERTS TAB (app/(parent-app)/alerts.tsx):
+- List of safety alerts sorted by date
+- Each alert card shows:
+  - Alert type icon and color coding
+  - Message
+  - Timestamp
+  - "Acknowledge" button
+  - For critical alerts: "Suggested Actions" expandable with:
+    * "Talk to your teen about..."
+    * "Consider consulting a clinician if..."
+- Filter by alert type
+- Mark all as read option
+
+SETTINGS TAB (app/(parent-app)/settings/):
+- index.tsx: Settings menu
+- supervision.tsx: Change supervision level
+- guardrails.tsx: Edit all guardrails
+  - Max weekly training minutes (number input or "no limit")
+  - Minimum nightly sleep target (slider 7-10 hours)
+  - No weight-loss mode toggle (default ON, with explanation)
+  - Alert thresholds customization
+- notifications.tsx: Alert notification preferences
+- account.tsx: Profile, sign out
+
+DESIGN NOTES:
+- Parent interface should feel supportive, not surveillance-like
+- Language should be collaborative: "Support your teen's goals"
+- Emphasize that detailed data is only shown with teen consent
+- Include educational tooltips explaining what metrics mean
+- Non-judgmental framing: "Areas to discuss" not "Problems"
