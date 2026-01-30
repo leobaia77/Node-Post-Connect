@@ -153,3 +153,42 @@ npx expo start
 ### Environment Variables Required
 - `DATABASE_URL`: PostgreSQL connection string
 - `SESSION_SECRET`: Secret for JWT signing (falls back to development default)
+
+## Safety Alert System
+
+### Overview
+The safety alert system monitors teen health data and generates supportive alerts when concerning patterns are detected. Alerts use non-shame-based language and recommend professional consultation for critical issues.
+
+### Safety Rules (8 types)
+1. **sleep_deficit** - Avg sleep below 7hrs over 7 days (critical)
+2. **training_spike** - Training increased 30%+ week-over-week (warning)
+3. **pain_flag** - Pain reported in recent check-in (warning)
+4. **low_energy** - Avg energy below 3/10 over 7 days (info)
+5. **high_stress** - Avg stress above 7/10 over 7 days (warning)
+6. **restrictive_eating** - Low calories + weight-loss goal active (critical)
+7. **overtraining** - Training 7+ days consecutive (warning)
+8. **low_intake** - Low calorie intake without weight goal (info)
+
+### Scheduling
+- Runs daily at 8am in each teen's local timezone
+- Uses date-fns-tz for DST-safe timezone calculations
+- Per-teen scheduling with individual timeout management
+- Persists lastSafetyCheckAt to prevent duplicate runs across restarts
+
+### Configuration Environment Variables
+- `ENABLE_SAFETY_SCHEDULER`: Set to "true" to enable (default: false)
+- `SAFETY_CHECK_HOUR`: Hour to run checks (default: 8)
+- `SAFETY_CHECK_TIMEZONE`: Default timezone for teens without profile timezone (default: America/New_York)
+
+### API Endpoints
+- `GET /api/safety-alerts` - Teen's own alerts
+- `PUT /api/safety-alerts/:id/acknowledge` - Teen acknowledges alert
+- `GET /api/parent/alerts` - Parent-visible alerts (respects shareWithParent flag)
+- `PUT /api/parent/alerts/:id/acknowledge` - Parent acknowledges alert
+- `POST /api/safety-check` - Manual trigger for teen's safety check
+- `POST /api/push-token` - Register push notification token
+
+### Push Notifications
+- Uses Expo Push API for real notifications
+- Sends to teen and linked parents (respecting shareWithParent)
+- Push tokens stored in profiles.pushToken field
