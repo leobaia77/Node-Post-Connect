@@ -22,9 +22,17 @@ const SETTINGS_SECTIONS = [
     ],
   },
   {
-    title: 'Account',
+    title: 'Your Data',
     items: [
+      { id: 'export', title: 'Export My Data', icon: 'download', route: '/(teen-app)/settings/data-export' },
       { id: 'account', title: 'Account Settings', icon: 'person', route: '/(teen-app)/settings/account' },
+    ],
+  },
+  {
+    title: 'Legal',
+    items: [
+      { id: 'privacy', title: 'Privacy Policy', icon: 'shield-checkmark', route: '/(teen-app)/settings/privacy-policy' },
+      { id: 'terms', title: 'Terms of Service', icon: 'document-text', route: '/(teen-app)/settings/terms' },
     ],
   },
 ];

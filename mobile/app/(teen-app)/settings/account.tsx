@@ -51,13 +51,50 @@ export default function AccountScreen() {
   const handleDeleteAccount = () => {
     Alert.alert(
       'Delete Account',
-      'This action cannot be undone. All your data will be permanently deleted.',
+      'Are you sure you want to delete your account? This will permanently remove all your data.',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Delete', 
+          text: 'Continue', 
           style: 'destructive',
-          onPress: () => {
+          onPress: () => confirmDeleteAccount(),
+        },
+      ]
+    );
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Final Confirmation',
+      'This action CANNOT be undone. All your health data, logs, and account information will be permanently deleted within 30 days. Type "DELETE" to confirm.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete Forever', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete('/api/account');
+              Alert.alert(
+                'Account Deleted',
+                'Your account deletion has been scheduled. You will receive a confirmation email. Your data will be permanently removed within 30 days.',
+                [
+                  { 
+                    text: 'OK', 
+                    onPress: async () => {
+                      await api.logout();
+                      router.replace('/(auth)/login');
+                    }
+                  }
+                ]
+              );
+            } catch (error) {
+              Alert.alert(
+                'Error',
+                'We couldn\'t process your request right now. Please try again or contact support.',
+                [{ text: 'OK' }]
+              );
+            }
           },
         },
       ]
