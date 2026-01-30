@@ -1016,6 +1016,468 @@ export async function registerRoutes(
     }
   });
 
+  // SCOLIOSIS SUPPORT ROUTES
+
+  // PT Exercises - Get all available exercises
+  app.get("/api/scoliosis/exercises", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const exercises = await storage.getPtExercises();
+      res.json(exercises);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get exercises" });
+    }
+  });
+
+  // PT Exercises - Create new exercise
+  app.post("/api/scoliosis/exercises", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { name, description, instructions, durationSeconds, repetitions, sets, category, videoUrl, imageUrl } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: "Exercise name is required" });
+      }
+
+      const exercise = await storage.createPtExercise({
+        name,
+        description,
+        instructions: instructions || [],
+        durationSeconds: durationSeconds || null,
+        repetitions: repetitions || null,
+        sets: sets || null,
+        category: category || 'stretching',
+        videoUrl: videoUrl || null,
+        imageUrl: imageUrl || null,
+      });
+
+      res.json(exercise);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create exercise" });
+    }
+  });
+
+  // PT Routines with exercises
+  app.get("/api/scoliosis/routines", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const routines = await storage.getPtRoutines(teenProfile.id);
+      
+      // Get exercises for each routine
+      const routinesWithExercises = await Promise.all(
+        routines.map(async (routine) => {
+          const exercises = await storage.getPtExercisesByRoutine(routine.id);
+          return { ...routine, exercises };
+        })
+      );
+
+      res.json(routinesWithExercises);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get routines" });
+    }
+  });
+
+  // Add exercise to routine
+  app.post("/api/scoliosis/routines/:routineId/exercises", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { routineId } = req.params;
+      const { exerciseId, orderIndex, customNotes } = req.body;
+
+      if (!exerciseId) {
+        return res.status(400).json({ error: "Exercise ID is required" });
+      }
+
+      const routineExercise = await storage.addExerciseToRoutine({
+        routineId,
+        exerciseId,
+        orderIndex: orderIndex || 0,
+        customNotes: customNotes || null,
+      });
+
+      res.json(routineExercise);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to add exercise to routine" });
+    }
+  });
+
+  // PT Adherence logs by profile
+  app.get("/api/scoliosis/pt-adherence", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const start = startDate ? String(startDate) : format(subDays(new Date(), 30), "yyyy-MM-dd");
+      const end = endDate ? String(endDate) : format(new Date(), "yyyy-MM-dd");
+
+      const logs = await storage.getPtAdherenceLogsByProfile(teenProfile.id, start, end);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get PT adherence logs" });
+    }
+  });
+
+  // Create or update PT adherence log
+  app.post("/api/scoliosis/pt-adherence", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { routineId, date, completed, durationMinutes, exercisesCompleted, notes, painDuringExercise } = req.body;
+
+      if (!routineId) {
+        return res.status(400).json({ error: "Routine ID is required" });
+      }
+
+      const log = await storage.createPtAdherenceLog({
+        routineId,
+        date: date || format(new Date(), "yyyy-MM-dd"),
+        completed: completed || false,
+        durationMinutes: durationMinutes || null,
+        exercisesCompleted: exercisesCompleted || [],
+        notes: notes || null,
+        painDuringExercise: painDuringExercise || null,
+      });
+
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to log PT adherence" });
+    }
+  });
+
+  // Update PT adherence log
+  app.patch("/api/scoliosis/pt-adherence/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const log = await storage.updatePtAdherenceLog(id, req.body);
+      
+      if (!log) {
+        return res.status(404).json({ error: "PT adherence log not found" });
+      }
+      
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update PT adherence log" });
+    }
+  });
+
+  // Brace Schedule routes
+  app.get("/api/scoliosis/brace-schedule", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const schedule = await storage.getBraceSchedule(teenProfile.id);
+      res.json(schedule || null);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get brace schedule" });
+    }
+  });
+
+  app.post("/api/scoliosis/brace-schedule", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const { dailyTargetHours, wearingSchedule, braceType, notes, prescribedBy } = req.body;
+
+      const schedule = await storage.createBraceSchedule({
+        teenProfileId: teenProfile.id,
+        dailyTargetHours: dailyTargetHours || 16,
+        wearingSchedule: wearingSchedule || null,
+        braceType: braceType || null,
+        notes: notes || null,
+        prescribedBy: prescribedBy || null,
+        isActive: true,
+      });
+
+      res.json(schedule);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create brace schedule" });
+    }
+  });
+
+  app.patch("/api/scoliosis/brace-schedule/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const schedule = await storage.updateBraceSchedule(id, req.body);
+      
+      if (!schedule) {
+        return res.status(404).json({ error: "Brace schedule not found" });
+      }
+      
+      res.json(schedule);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update brace schedule" });
+    }
+  });
+
+  // Brace wearing logs
+  app.get("/api/scoliosis/brace-logs", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { date, startDate, endDate } = req.query;
+      
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      if (date) {
+        const logs = await storage.getBraceWearingLogs(teenProfile.id, String(date));
+        res.json(logs);
+      } else {
+        const start = startDate ? String(startDate) : format(subDays(new Date(), 7), "yyyy-MM-dd");
+        const end = endDate ? String(endDate) : format(new Date(), "yyyy-MM-dd");
+        const logs = await storage.getBraceWearingLogsByRange(teenProfile.id, start, end);
+        res.json(logs);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get brace wearing logs" });
+    }
+  });
+
+  // Get active brace session (for timer)
+  app.get("/api/scoliosis/brace-logs/active", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const activeSession = await storage.getActiveBraceSession(teenProfile.id);
+      res.json(activeSession || null);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get active brace session" });
+    }
+  });
+
+  // Start brace wearing session
+  app.post("/api/scoliosis/brace-logs/start", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      // Check for existing active session
+      const activeSession = await storage.getActiveBraceSession(teenProfile.id);
+      if (activeSession) {
+        return res.status(400).json({ error: "Already have an active brace session" });
+      }
+
+      const now = new Date();
+      const log = await storage.createBraceWearingLog({
+        teenProfileId: teenProfile.id,
+        date: format(now, "yyyy-MM-dd"),
+        startTime: now.toISOString(),
+        endTime: null,
+        durationMinutes: null,
+        notes: req.body.notes || null,
+      });
+
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to start brace session" });
+    }
+  });
+
+  // End brace wearing session
+  app.post("/api/scoliosis/brace-logs/:id/end", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const now = new Date();
+      
+      // Get the log to calculate duration
+      const existingLogs = await storage.getBraceWearingLogsByRange(
+        "", 
+        format(subDays(now, 1), "yyyy-MM-dd"),
+        format(now, "yyyy-MM-dd")
+      );
+      const log = existingLogs.find(l => l.id === id);
+      
+      if (!log) {
+        return res.status(404).json({ error: "Brace session not found" });
+      }
+
+      const startTime = new Date(log.startTime);
+      const durationMinutes = Math.round((now.getTime() - startTime.getTime()) / 60000);
+
+      const updated = await storage.updateBraceWearingLog(id, {
+        endTime: now.toISOString(),
+        durationMinutes,
+        notes: req.body.notes || log.notes,
+      });
+
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to end brace session" });
+    }
+  });
+
+  // Manual brace log entry
+  app.post("/api/scoliosis/brace-logs", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const { date, startTime, endTime, durationMinutes, notes } = req.body;
+
+      const log = await storage.createBraceWearingLog({
+        teenProfileId: teenProfile.id,
+        date: date || format(new Date(), "yyyy-MM-dd"),
+        startTime,
+        endTime,
+        durationMinutes,
+        notes: notes || null,
+      });
+
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create brace log" });
+    }
+  });
+
+  // Symptom logs routes
+  app.get("/api/scoliosis/symptoms", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { startDate, endDate, date } = req.query;
+      
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      if (date) {
+        const log = await storage.getSymptomLogByDate(teenProfile.id, String(date));
+        res.json(log || null);
+      } else {
+        const start = startDate ? String(startDate) : format(subDays(new Date(), 30), "yyyy-MM-dd");
+        const end = endDate ? String(endDate) : format(new Date(), "yyyy-MM-dd");
+        const logs = await storage.getSymptomLogs(teenProfile.id, start, end);
+        res.json(logs);
+      }
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get symptom logs" });
+    }
+  });
+
+  app.post("/api/scoliosis/symptoms", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const { date, curveDiscomfortLevel, painLocations, newSymptoms, redFlags, notes } = req.body;
+
+      const log = await storage.createSymptomLog({
+        teenProfileId: teenProfile.id,
+        date: date || format(new Date(), "yyyy-MM-dd"),
+        curveDiscomfortLevel: curveDiscomfortLevel || null,
+        painLocations: painLocations || [],
+        newSymptoms: newSymptoms || null,
+        redFlags: redFlags || [],
+        notes: notes || null,
+      });
+
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to log symptoms" });
+    }
+  });
+
+  app.patch("/api/scoliosis/symptoms/:id", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { id } = req.params;
+      const log = await storage.updateSymptomLog(id, req.body);
+      
+      if (!log) {
+        return res.status(404).json({ error: "Symptom log not found" });
+      }
+      
+      res.json(log);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to update symptom log" });
+    }
+  });
+
+  // Get scoliosis support status for teen
+  app.get("/api/scoliosis/status", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const today = format(new Date(), "yyyy-MM-dd");
+      const weekAgo = format(subDays(new Date(), 7), "yyyy-MM-dd");
+
+      const [braceSchedule, todayBraceLogs, weekPtLogs, todaySymptoms] = await Promise.all([
+        storage.getBraceSchedule(teenProfile.id),
+        storage.getBraceWearingLogs(teenProfile.id, today),
+        storage.getPtAdherenceLogsByProfile(teenProfile.id, weekAgo, today),
+        storage.getSymptomLogByDate(teenProfile.id, today),
+      ]);
+
+      // Calculate today's brace wearing time
+      const todayBraceMinutes = todayBraceLogs.reduce((sum, log) => sum + (log.durationMinutes || 0), 0);
+      const todayBraceHours = Math.round(todayBraceMinutes / 60 * 10) / 10;
+
+      // Calculate PT adherence for the week
+      const completedPtSessions = weekPtLogs.filter(log => log.completed).length;
+      const routines = await storage.getPtRoutines(teenProfile.id);
+      const expectedSessions = routines.reduce((sum, r) => sum + (r.frequencyPerWeek || 0), 0);
+
+      res.json({
+        hasScoliosisSupport: teenProfile.hasScoliosisSupport,
+        braceSchedule,
+        todayBraceHours,
+        braceTargetHours: braceSchedule?.dailyTargetHours || 0,
+        weeklyPtCompleted: completedPtSessions,
+        weeklyPtTarget: expectedSessions,
+        hasSymptomLog: !!todaySymptoms,
+        latestSymptom: todaySymptoms,
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get scoliosis status" });
+    }
+  });
+
+  // Enable scoliosis support for teen profile
+  app.post("/api/scoliosis/enable", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+
+      const updated = await storage.updateTeenProfile(teenProfile.id, { hasScoliosisSupport: true });
+      res.json(updated);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to enable scoliosis support" });
+    }
+  });
+
   // PUSH TOKEN REGISTRATION
   app.post("/api/push-token", authMiddleware, async (req: AuthRequest, res) => {
     try {
