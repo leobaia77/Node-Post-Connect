@@ -30,7 +30,15 @@ Preferred communication style: Simple, everyday language.
 - **Health Logging:** Comprehensive logging for daily check-ins, sleep, workouts, and nutrition.
 - **Safety Alert System:** Monitors health data against predefined rules to generate non-shame-based alerts for concerning patterns (e.g., sleep deficit, overtraining, pain flags). Alerts are scheduled daily, localized by timezone, and support push notifications via Expo Push API.
 - **AI Recommendations (LLM Orchestrator):** Generates personalized, evidence-based health recommendations using OpenAI GPT models (via Replit AI Integrations). It incorporates a strict safety filter to prevent harmful advice (e.g., extreme dieting, unapproved supplements) and validates all recommendations against an internal evidence library.
-- **Evidence Library:** A RAG-based system providing research-backed health recommendations from authoritative sources across categories like sleep, nutrition, training, and bone health, used to ground LLM outputs.
+- **Evidence Library:** A RAG-based system providing research-backed health recommendations from authoritative sources across categories like sleep, nutrition, training, bone health, and scoliosis, used to ground LLM outputs.
+- **Scoliosis Care Module:** Comprehensive scoliosis management including:
+  - **PT Routine Management:** Prescribed physical therapy exercises with timer, reps/sets tracking, and adherence logging. Exercises linked via junction table for reusability.
+  - **Brace Tracking:** Real-time session timer, daily wear time goals, progress visualization against prescribed hours.
+  - **Symptom Logging:** Interactive body diagram with coordinate-based pain location tracking, discomfort levels, and red flag warnings for serious symptoms (numbness, weakness, bladder issues).
+  - **Educational Resources:** Curated content organized by topic (exercise, brace care, lifestyle, mental health) with external resource links.
+  - **LLM Safety Rules:** Scoliosis-specific guardrails preventing advice that could override PT/orthotist prescriptions, with automatic escalation for red flag symptoms.
+  - Mobile screens: `mobile/app/(teen-app)/scoliosis/` (dashboard, pt-routine, brace-tracker, symptom-log, resources)
+  - API endpoints: `/api/pt-routines`, `/api/pt-exercises`, `/api/pt-adherence`, `/api/brace-schedules`, `/api/brace-logs`, `/api/scoliosis-symptoms`
 
 ### Project Structure
 Organized into `client/` (React web frontend), `mobile/` (React Native Expo app), `server/` (Express backend), and `shared/` (common code including Drizzle schema).
