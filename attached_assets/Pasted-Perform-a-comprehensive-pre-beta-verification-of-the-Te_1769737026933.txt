@@ -1,0 +1,377 @@
+Perform a comprehensive pre-beta verification of the Teen Physical Development Optimization App. Run through each checklist item, test it, and report the status. For any failures, provide specific details on what's broken and how to fix it.
+
+## VERIFICATION CHECKLIST
+
+### 1. BACKEND INFRASTRUCTURE
+
+#### 1.1 Database
+- [ ] PostgreSQL connection is active and stable
+- [ ] All 15 tables exist with correct schemas:
+  - [ ] users
+  - [ ] profiles
+  - [ ] teen_profiles
+  - [ ] parent_teen_links
+  - [ ] parent_guardrails
+  - [ ] teen_sharing_preferences
+  - [ ] daily_checkins
+  - [ ] sleep_logs
+  - [ ] workout_logs
+  - [ ] nutrition_logs
+  - [ ] pt_routines
+  - [ ] pt_adherence_logs
+  - [ ] morning_briefs
+  - [ ] recommendations
+  - [ ] safety_alerts
+- [ ] Foreign key constraints are properly set
+- [ ] Indexes exist on frequently queried columns (user_id, date, teen_profile_id)
+- [ ] Database migrations are tracked and can be re-run
+
+#### 1.2 API Endpoints
+Test each endpoint returns correct status codes and data shapes:
+
+**Auth:**
+- [ ] POST /auth/register - creates user, returns JWT
+- [ ] POST /auth/login - validates credentials, returns JWT
+- [ ] GET /auth/me - returns current user with valid token
+- [ ] Auth middleware rejects invalid/expired tokens (401)
+
+**Profiles:**
+- [ ] GET /profile - returns user profile
+- [ ] PUT /profile - updates profile correctly
+
+**Teen Features:**
+- [ ] POST /teen/goals - saves goals and weights
+- [ ] GET /teen/goals - retrieves goals
+- [ ] PUT /teen/goals - updates goals
+
+**Parent-Teen Linking:**
+- [ ] POST /link/generate-code - generates unique invite code
+- [ ] POST /link/accept - links accounts with valid code
+- [ ] GET /link/status - returns link status
+
+**Guardrails:**
+- [ ] POST /guardrails - parent can set guardrails
+- [ ] GET /guardrails - retrieves current guardrails
+- [ ] PUT /guardrails - updates guardrails
+
+**Logging Endpoints:**
+- [ ] POST /checkin - saves daily checkin
+- [ ] GET /checkins?start_date=&end_date= - returns filtered checkins
+- [ ] POST /sleep - saves sleep log
+- [ ] GET /sleep?start_date=&end_date= - returns filtered logs
+- [ ] POST /workout - saves workout
+- [ ] GET /workouts?start_date=&end_date= - returns filtered workouts
+- [ ] POST /nutrition - saves meal
+- [ ] GET /nutrition?start_date=&end_date= - returns filtered nutrition
+
+**PT/Scoliosis:**
+- [ ] POST /pt-routine - creates PT routine
+- [ ] GET /pt-routines - lists routines
+- [ ] POST /pt-adherence - logs PT completion
+- [ ] GET /pt-adherence?start_date=&end_date= - returns adherence logs
+
+**Recommendations:**
+- [ ] GET /morning-brief - returns or generates brief
+- [ ] GET /recommendations - returns AI recommendations
+- [ ] POST /recommendations/:id/actions/:actionId/complete - marks action complete
+
+**Safety:**
+- [ ] GET /safety-alerts - returns alerts for user
+- [ ] PUT /safety-alerts/:id/acknowledge - marks alert acknowledged
+
+**Parent Dashboard:**
+- [ ] GET /parent/dashboard - returns aggregated data per sharing settings
+- [ ] GET /parent/alerts - returns alerts for linked teen
+
+**HealthKit Sync:**
+- [ ] POST /health-sync - accepts and stores health data
+
+**Account Management:**
+- [ ] GET /export-data - exports all user data
+- [ ] DELETE /account - deletes user account and data
+
+#### 1.3 Backend Services
+- [ ] Morning Brief Builder generates valid JSON schema
+- [ ] Evidence Library returns relevant evidence for queries
+- [ ] LLM Orchestrator connects to OpenAI/Anthropic API
+- [ ] LLM safety filter blocks prohibited content
+- [ ] Safety Rules engine detects all 7 rule types:
+  - [ ] Sleep deficit (3+ nights below target)
+  - [ ] Training spike (>150% of 4-week avg)
+  - [ ] Pain flag alerts
+  - [ ] Low energy pattern
+  - [ ] High stress pattern
+  - [ ] Restrictive eating signs
+  - [ ] Overtraining indicators
+- [ ] Cron jobs are scheduled (morning brief, safety checks)
+
+#### 1.4 Environment Variables
+Verify all required env vars are set:
+- [ ] DATABASE_URL
+- [ ] JWT_SECRET (min 32 characters)
+- [ ] OPENAI_API_KEY or ANTHROPIC_API_KEY
+- [ ] NODE_ENV=production (for beta)
+- [ ] API_BASE_URL
+
+#### 1.5 Security
+- [ ] Passwords are hashed (bcrypt, min 10 rounds)
+- [ ] JWT tokens expire appropriately (e.g., 7 days)
+- [ ] Rate limiting is enabled on sensitive endpoints
+- [ ] CORS is configured for mobile app
+- [ ] SQL injection prevention (parameterized queries)
+- [ ] Input validation on all endpoints
+- [ ] No sensitive data in error responses
+
+---
+
+### 2. FRONTEND (REACT NATIVE/EXPO)
+
+#### 2.1 Build Configuration
+- [ ] app.json has correct bundle identifier
+- [ ] app.json has HealthKit entitlements configured
+- [ ] app.json has privacy usage descriptions
+- [ ] EAS build configuration (eas.json) is correct
+- [ ] Environment variables are configured for production API
+
+#### 2.2 Authentication Flow
+- [ ] Login screen renders correctly
+- [ ] Registration screen with role selection works
+- [ ] Sign in with Apple placeholder exists
+- [ ] JWT token is stored securely (expo-secure-store)
+- [ ] Token is attached to all API requests
+- [ ] Logout clears token and navigates to login
+- [ ] Expired token triggers re-authentication
+
+#### 2.3 Teen Onboarding
+- [ ] Age range selection works
+- [ ] Goals multi-select with priority sliders saves correctly
+- [ ] Sports selection and level picker works
+- [ ] Weekly availability editor functions
+- [ ] HealthKit permission screen shows and handles responses
+- [ ] Parent link code entry works
+- [ ] Onboarding can be completed end-to-end
+- [ ] Skip options work where appropriate
+
+#### 2.4 Parent Onboarding
+- [ ] Invite code generation displays code
+- [ ] Supervision level selection saves
+- [ ] Guardrails configuration saves all settings
+- [ ] Onboarding completes and navigates to dashboard
+
+#### 2.5 Teen Main App - Home Tab
+- [ ] Morning Brief card loads and displays data
+- [ ] Morning Brief expands with full details
+- [ ] Recommendations card shows actions
+- [ ] "Why this?" modal shows evidence and rationale
+- [ ] Action checkboxes toggle and persist
+- [ ] Today's schedule card displays activities
+- [ ] Readiness indicator shows correct color/status
+- [ ] "Adjust today" modal works
+- [ ] Pull-to-refresh works
+
+#### 2.6 Teen Main App - Plan Tab
+- [ ] Week calendar renders correctly
+- [ ] Activities display on correct days
+- [ ] Free time blocks show
+- [ ] "Add Activity" FAB opens modal
+- [ ] Activity creation saves to backend
+- [ ] Activities can be edited/deleted
+
+#### 2.7 Teen Main App - Log Tab
+- [ ] All 4 log buttons navigate correctly
+- [ ] Meal log form submits successfully
+- [ ] Workout log with RPE slider works
+- [ ] PT log checklist and timer function
+- [ ] Daily checkin sliders work (1-5 scales)
+- [ ] Pain flag checkbox and notes work
+- [ ] All logs save to backend
+
+#### 2.8 Teen Main App - Insights Tab
+- [ ] Goal filter dropdown works
+- [ ] Sleep vs Training chart renders with data
+- [ ] Macro adherence visualization works
+- [ ] Consistency score displays
+- [ ] Charts handle empty data gracefully
+
+#### 2.9 Teen Main App - Settings
+- [ ] Goals editing works
+- [ ] Sharing preferences toggle and save
+- [ ] HealthKit connection status shows
+- [ ] Notification preferences save
+- [ ] Account settings display correctly
+- [ ] Sign out works
+- [ ] Data export initiates download
+- [ ] Account deletion flow works with confirmation
+
+#### 2.10 Parent App - Overview
+- [ ] Teen status card shows current data
+- [ ] Weekly summary cards populate
+- [ ] At-risk indicators show when appropriate
+- [ ] Guardrails status displays
+- [ ] "Edit Guardrails" navigates correctly
+
+#### 2.11 Parent App - Trends
+- [ ] Date range selector works
+- [ ] All charts render with data
+- [ ] Charts respect sharing preferences
+- [ ] Empty states show when no data
+
+#### 2.12 Parent App - Alerts
+- [ ] Alerts list loads and displays
+- [ ] Alert cards show correct info
+- [ ] Acknowledge button works
+- [ ] Filter by type works
+- [ ] Critical alerts show suggested actions
+
+#### 2.13 Parent App - Settings
+- [ ] Supervision level can be changed
+- [ ] All guardrails can be edited
+- [ ] Notification preferences work
+- [ ] Account settings work
+
+#### 2.14 Scoliosis Support Features
+- [ ] Scoliosis dashboard loads for users with goal
+- [ ] PT routine displays exercises
+- [ ] Exercise timer works
+- [ ] PT completion logs correctly
+- [ ] PT history calendar shows adherence
+- [ ] Brace tracker timer works
+- [ ] Symptom log with body diagram works
+- [ ] Red flag checkboxes trigger alerts
+- [ ] Resources screen loads content
+
+#### 2.15 HealthKit Integration
+- [ ] Permission request shows correct data types
+- [ ] Permissions can be granted/denied
+- [ ] Sleep data syncs when available
+- [ ] Workout data syncs when available
+- [ ] Nutrition data syncs when available
+- [ ] Sync status shows in connections screen
+- [ ] Manual sync button works
+- [ ] Handles permission denied gracefully
+
+---
+
+### 3. INTEGRATION TESTS
+
+#### 3.1 End-to-End Flows
+Test complete user journeys:
+
+- [ ] **Teen Registration to First Recommendation:**
+  1. Register as teen
+  2. Complete onboarding
+  3. Log sleep, workout, and checkin
+  4. Wait for/trigger morning brief generation
+  5. View recommendations
+  6. Complete an action
+
+- [ ] **Parent Linking Flow:**
+  1. Register as parent
+  2. Generate invite code
+  3. Register as teen in separate session
+  4. Enter invite code
+  5. Verify link appears for both users
+  6. Verify parent sees teen data per permissions
+
+- [ ] **Safety Alert Flow:**
+  1. As teen, log very low sleep for 3+ days
+  2. Verify safety alert is created
+  3. Verify teen sees alert
+  4. Verify parent sees alert (if sharing enabled)
+  5. Acknowledge alert
+  6. Verify acknowledgment persists
+
+- [ ] **Guardrails Enforcement:**
+  1. Parent sets max training minutes
+  2. Teen logs workouts approaching limit
+  3. Verify recommendations respect limit
+  4. Verify no recommendations exceed guardrail
+
+- [ ] **Data Privacy:**
+  1. Teen disables detailed sharing
+  2. Verify parent API returns only summary data
+  3. Teen enables detailed sharing
+  4. Verify parent API returns detailed data
+
+#### 3.2 LLM Safety Verification
+- [ ] Generate recommendations for test cases:
+  - [ ] Normal healthy teen → safe, balanced recommendations
+  - [ ] Teen with scoliosis goal → includes PT reminders, professional follow-up
+  - [ ] Teen with low sleep → prioritizes sleep recommendations
+  - [ ] Teen with high training load → suggests recovery
+  - [ ] Teen with pain flags → recommends consulting professional
+- [ ] Verify LLM never outputs:
+  - [ ] Weight loss advice
+  - [ ] Calorie restriction below safe minimums
+  - [ ] Supplement recommendations
+  - [ ] Content that could promote eating disorders
+  - [ ] Advice that overrides parent guardrails
+
+---
+
+### 4. APP STORE READINESS
+
+#### 4.1 Required Screens & Content
+- [ ] Privacy Policy screen is accessible and complete
+- [ ] Terms of Service screen is accessible
+- [ ] "Not medical advice" disclaimers appear where needed
+- [ ] Scoliosis screens have "supports care plan" messaging
+- [ ] All "consult professional" prompts are in place
+
+#### 4.2 Data Compliance
+- [ ] Data export feature works completely
+- [ ] Account deletion removes all user data
+- [ ] No HealthKit data used for advertising (verify code comments)
+- [ ] No HealthKit data stored in iCloud
+- [ ] Privacy nutrition labels are accurate
+
+#### 4.3 UI/UX Quality
+- [ ] No placeholder text remaining ("Lorem ipsum", "TODO", etc.)
+- [ ] All images/icons load correctly
+- [ ] No broken navigation links
+- [ ] Loading states show for all async operations
+- [ ] Error states show user-friendly messages
+- [ ] Empty states have helpful content
+- [ ] Pull-to-refresh works on all list screens
+
+#### 4.4 Accessibility
+- [ ] VoiceOver labels on all buttons and interactive elements
+- [ ] Dynamic type scales text appropriately
+- [ ] Color contrast meets WCAG AA standards
+- [ ] Touch targets are minimum 44x44 points
+
+#### 4.5 Performance
+- [ ] App launches in under 3 seconds
+- [ ] Screens load in under 1 second
+- [ ] No memory leaks during extended use
+- [ ] Offline mode works for cached data
+- [ ] Sync queue processes when back online
+
+#### 4.6 Build Artifacts
+- [ ] iOS build completes without errors
+- [ ] App icon is set (1024x1024 + all sizes)
+- [ ] Splash screen displays correctly
+- [ ] Bundle version is incremented
+- [ ] No development/debug code in production build
+
+---
+
+### 5. TESTFLIGHT SUBMISSION CHECKLIST
+
+- [ ] Apple Developer account is active
+- [ ] App ID registered in App Store Connect
+- [ ] Certificates and provisioning profiles are valid
+- [ ] App builds and uploads successfully to TestFlight
+- [ ] TestFlight beta information is complete:
+  - [ ] Beta App Description
+  - [ ] Feedback email
+  - [ ] Contact information
+  - [ ] Privacy Policy URL
+- [ ] Internal testing group is set up
+- [ ] Build is approved for testing (may take 24-48 hours for first build)
+
+---
+
+## OUTPUT FORMAT
+
+For each section, provide:
