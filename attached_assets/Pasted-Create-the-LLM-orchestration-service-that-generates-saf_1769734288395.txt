@@ -1,0 +1,106 @@
+Create the LLM orchestration service that generates safe, evidence-based recommendations.
+
+CREATE: services/llmOrchestrator.ts
+
+USE: OpenAI API (gpt-4-turbo) or Anthropic Claude API
+
+SYSTEM PROMPT (store as constant):
+"""
+You are a health and fitness guidance assistant for teenagers. Your role is to provide evidence-based, safe recommendations for sleep, nutrition, training, and recovery.
+
+CRITICAL SAFETY RULES - YOU MUST NEVER:
+1. Suggest extreme calorie restriction or any form of restrictive dieting
+2. Recommend fasting for minors
+3. Suggest supplements, diet pills, or performance-enhancing substances
+4. Encourage weight loss as a goal for teens
+5. Provide advice that could promote eating disorders
+6. Suggest unsafe training loads or exercises beyond the teen's level
+7. Use body-shaming or appearance-focused language
+8. Claim to diagnose or treat medical conditions
+9. Suggest the teen hide anything from parents/guardians
+10. Override parent-set guardrails under any circumstances
+
+IMPORTANT GUIDANCE PRINCIPLES:
+- All recommendations must cite evidence from the provided evidence library
+- Frame everything positively (what TO do, not what NOT to do)
+- Emphasize health, energy, and performance over appearance
+- Respect the teen's selected goals and priorities
+- Consider the full context (schedule, recovery status, upcoming events)
+- When in doubt, recommend rest/recovery over more training
+- Always recommend consulting a healthcare provider for medical concerns
+- For scoliosis support: emphasize adherence to prescribed PT and professional follow-up
+
+OUTPUT FORMAT: You must respond with valid JSON only, no markdown or explanation.
+"""
+
+RECOMMENDATION OUTPUT SCHEMA:
+{
+  "date": "YYYY-MM-DD",
+  "today_actions": [
+    {
+      "id": "action-001",
+      "category": "nutrition" | "training" | "sleep" | "recovery" | "pt",
+      "priority": "high" | "medium" | "low",
+      "action": "Brief action text (max 100 chars)",
+      "detail": "Longer explanation if needed",
+      "timing": "at lunch" | "before practice" | "before bed" | null,
+      "evidence_ids": ["nutrition-protein-001"],
+      "why": "Brief rationale connecting to their goals"
+    }
+  ],
+  "week_focus": {
+    "theme": "Recovery and preparation for Saturday's game",
+    "key_points": ["Point 1", "Point 2", "Point 3"],
+    "evidence_ids": ["training-periodization-001"]
+  },
+  "nutrition_guidance": {
+    "protein_target_range": "75-90g",
+    "focus_foods": ["lean meats", "dairy", "legumes"],
+    "pre_practice_suggestion": "Light snack with carbs 1-2 hours before",
+    "post_practice_suggestion": "Protein + carbs within 30-60 minutes",
+    "hydration_reminder": "Aim for 8+ cups of water, more on training days",
+    "evidence_ids": ["nutrition-protein-001", "nutrition-timing-001"]
+  },
+  "training_guidance": {
+    "recommended_volume_today": "moderate" | "light" | "rest" | "full",
+    "specific_suggestions": ["Focus on mobility work", "Add 10-min cooldown"],
+    "cautions": ["Soreness is elevated - prioritize recovery"],
+    "evidence_ids": ["training-overtraining-001"]
+  },
+  "sleep_guidance": {
+    "target_bedtime": "22:30",
+    "target_wake": "07:00",
+    "wind_down_suggestion": "Start winding down at 22:00, limit screens",
+    "evidence_ids": ["sleep-teens-001"]
+  },
+  "escalation_flags": [
+    {
+      "type": "consult_professional",
+      "reason": "Persistent pain reported for 5+ days",
+      "urgency": "soon"
+    }
+  ],
+  "confidence_notes": "High confidence for sleep/nutrition recommendations. Training guidance limited by incomplete workout logging."
+}
+
+FUNCTION: generateRecommendations(morningBrief: MorningBrief): Promise<Recommendations>
+1. Retrieve relevant evidence using searchEvidence()
+2. Build prompt with morning brief + evidence context
+3. Call LLM API with system prompt
+4. Parse and validate JSON response
+5. Run safety filter on output
+6. Store in recommendations table
+7. Return recommendations
+
+SAFETY FILTER FUNCTION: validateRecommendations(recs: Recommendations): ValidationResult
+- Check for prohibited keywords (diet pills, fasting, weight loss, etc.)
+- Verify all evidence_ids exist in library
+- Ensure calorie suggestions are within safe ranges
+- Block any recommendation that violates guardrails
+- Return { valid: boolean, blocked_items: [], warnings: [] }
+
+API ENDPOINT:
+GET /recommendations?date=YYYY-MM-DD
+- Requires valid morning brief for that date
+- Returns cached recommendations if already generated
+- Rate limited to prevent abuse
