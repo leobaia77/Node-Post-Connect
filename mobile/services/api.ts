@@ -157,6 +157,79 @@ class ApiService {
       body: { actionId, completed },
     });
   }
+
+  async getScoliosisStatus() {
+    return this.request('/api/scoliosis/status');
+  }
+
+  async enableScoliosisSupport() {
+    return this.request('/api/scoliosis/enable', { method: 'POST' });
+  }
+
+  async getBraceSchedule() {
+    return this.request('/api/scoliosis/brace-schedule');
+  }
+
+  async createBraceSchedule(data: unknown) {
+    return this.request('/api/scoliosis/brace-schedule', { method: 'POST', body: data });
+  }
+
+  async updateBraceSchedule(id: string, data: unknown) {
+    return this.request(`/api/scoliosis/brace-schedule/${id}`, { method: 'PATCH', body: data });
+  }
+
+  async getBraceLogs(date?: string) {
+    const query = date ? `?date=${date}` : '';
+    return this.request(`/api/scoliosis/brace-logs${query}`);
+  }
+
+  async getActiveBraceSession() {
+    return this.request('/api/scoliosis/brace-logs/active');
+  }
+
+  async startBraceSession(notes?: string) {
+    return this.request('/api/scoliosis/brace-logs/start', { method: 'POST', body: { notes } });
+  }
+
+  async endBraceSession(id: string, notes?: string) {
+    return this.request(`/api/scoliosis/brace-logs/${id}/end`, { method: 'POST', body: { notes } });
+  }
+
+  async createBraceLog(data: unknown) {
+    return this.request('/api/scoliosis/brace-logs', { method: 'POST', body: data });
+  }
+
+  async getPtExercises() {
+    return this.request('/api/scoliosis/exercises');
+  }
+
+  async getPtRoutines() {
+    return this.request('/api/scoliosis/routines');
+  }
+
+  async getPtAdherence(startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString() ? `?${params}` : '';
+    return this.request(`/api/scoliosis/pt-adherence${query}`);
+  }
+
+  async logPtAdherence(data: unknown) {
+    return this.request('/api/scoliosis/pt-adherence', { method: 'POST', body: data });
+  }
+
+  async getSymptomLogs(startDate?: string, endDate?: string) {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+    const query = params.toString() ? `?${params}` : '';
+    return this.request(`/api/scoliosis/symptoms${query}`);
+  }
+
+  async logSymptoms(data: unknown) {
+    return this.request('/api/scoliosis/symptoms', { method: 'POST', body: data });
+  }
 }
 
 export const api = new ApiService(API_URL);

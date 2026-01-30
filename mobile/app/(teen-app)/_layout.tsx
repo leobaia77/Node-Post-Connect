@@ -31,11 +31,11 @@ export default function TeenAppLayout() {
         }}
       />
       <Tabs.Screen
-        name="plan"
+        name="scoliosis"
         options={{
-          title: 'Plan',
+          title: 'Care',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+            <Ionicons name="medical" size={size} color={color} />
           ),
         }}
       />
@@ -55,6 +55,16 @@ export default function TeenAppLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="stats-chart" size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="plan"
+        options={{
+          title: 'Plan',
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="calendar" size={size} color={color} />
+          ),
+          href: null,
         }}
       />
       <Tabs.Screen
