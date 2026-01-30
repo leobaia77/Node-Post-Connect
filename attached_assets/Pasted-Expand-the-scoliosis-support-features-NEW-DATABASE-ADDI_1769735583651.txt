@@ -1,0 +1,89 @@
+Expand the scoliosis support features.
+
+NEW DATABASE ADDITIONS:
+
+pt_exercises table:
+- id, name, description, video_url (nullable)
+- target_area, duration_seconds, sets, reps
+
+pt_routine_exercises table:
+- routine_id, exercise_id, order, custom_notes
+
+brace_schedules table:
+- id, teen_profile_id
+- daily_target_hours
+- schedule (jsonb: time blocks when brace should be worn)
+- prescribed_by, start_date
+
+symptom_logs table:
+- id, teen_profile_id, date
+- curve_discomfort (1-5)
+- back_pain_location (jsonb)
+- new_symptoms (text)
+- red_flags (jsonb array)
+
+NEW SCREENS:
+
+app/(teen-app)/scoliosis/:
+  index.tsx - Scoliosis support dashboard
+  - PT routine status card
+  - Brace adherence card
+  - Symptom tracking card
+  - "When to contact your care team" reference
+  
+  pt-routine.tsx - Daily PT routine
+  - Exercise list with descriptions
+  - Embedded timer for each exercise
+  - Video links if available
+  - "Mark Complete" for each exercise
+  - Notes field
+  - Total routine progress indicator
+  
+  pt-history.tsx - PT adherence history
+  - Calendar view with completion indicators
+  - Weekly adherence percentage
+  - Trend chart
+  
+  brace-tracker.tsx - Brace wearing log
+  - Today's target vs logged
+  - Quick "Start wearing" / "Stop wearing" toggle
+  - Running timer when wearing
+  - Daily/weekly summary
+  
+  symptom-log.tsx - Log symptoms
+  - Body diagram for pain location
+  - Discomfort level slider
+  - Checkbox for red flags:
+    [ ] Sudden increase in pain
+    [ ] Pain that wakes you from sleep
+    [ ] Numbness or tingling
+    [ ] Changes in bowel/bladder
+    [ ] Visible curve change
+  - If red flags checked, show alert: "Please contact your healthcare provider soon"
+  
+  resources.tsx - Educational resources
+  - "Understanding scoliosis" content
+  - "Why PT exercises matter" evidence
+  - "Living with a brace" tips
+  - "When to see your doctor" guidelines
+  - Links to reputable sources
+
+CRITICAL SAFETY MESSAGING (display throughout):
+- "This app supports your prescribed care plan. It does not replace medical treatment."
+- "Always follow your healthcare provider's specific instructions."
+- "Contact your care team if you notice new symptoms or changes."
+
+UPDATE: LLM Orchestration
+- When has_scoliosis_support is true, include scoliosis-specific evidence
+- Generate PT adherence reminders
+- Never suggest exercises beyond prescribed PT
+- Always recommend professional follow-up for symptom changes
+
+UPDATE: Morning Brief
+- Include pt_adherence_7day in rolling context
+- Include brace adherence if applicable
+- Flag missed PT sessions
+
+UPDATE: Safety Rules
+- New rule: PT adherence < 50% for 14 days → gentle reminder alert
+- New rule: Any red flag symptom → immediate recommendation to contact provider

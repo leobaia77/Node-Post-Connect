@@ -46,6 +46,7 @@ export const teenProfiles = pgTable("teen_profiles", {
   goalWeights: jsonb("goal_weights").$type<Record<string, number>>().default({}),
   sports: jsonb("sports").$type<{ name: string; level: string; seasonStart?: string; seasonEnd?: string }[]>().default([]),
   weeklyAvailability: jsonb("weekly_availability").$type<Record<string, string[]>>().default({}),
+  hasScoliosisSupport: boolean("has_scoliosis_support").default(false),
   lastSafetyCheckAt: timestamp("last_safety_check_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -160,6 +161,64 @@ export const ptAdherenceLogs = pgTable("pt_adherence_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// PT exercises table - individual exercises that can be part of routines
+export const ptExercises = pgTable("pt_exercises", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  videoUrl: text("video_url"),
+  targetArea: varchar("target_area", { length: 100 }),
+  durationSeconds: integer("duration_seconds"),
+  sets: integer("sets"),
+  reps: integer("reps"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// PT routine exercises junction table
+export const ptRoutineExercises = pgTable("pt_routine_exercises", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  routineId: uuid("routine_id").references(() => ptRoutines.id).notNull(),
+  exerciseId: uuid("exercise_id").references(() => ptExercises.id).notNull(),
+  orderIndex: integer("order_index").default(0),
+  customNotes: text("custom_notes"),
+});
+
+// Brace schedules table - for scoliosis brace wearing
+export const braceSchedules = pgTable("brace_schedules", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teenProfileId: uuid("teen_profile_id").references(() => teenProfiles.id).notNull(),
+  dailyTargetHours: decimal("daily_target_hours", { precision: 4, scale: 1 }).notNull(),
+  schedule: jsonb("schedule").$type<{ startTime: string; endTime: string; label?: string }[]>().default([]),
+  prescribedBy: varchar("prescribed_by", { length: 100 }),
+  startDate: date("start_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// Brace wearing logs table - tracks actual brace wearing
+export const braceWearingLogs = pgTable("brace_wearing_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teenProfileId: uuid("teen_profile_id").references(() => teenProfiles.id).notNull(),
+  date: date("date").notNull(),
+  startTime: timestamp("start_time").notNull(),
+  endTime: timestamp("end_time"),
+  durationMinutes: integer("duration_minutes"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// Symptom logs table - for tracking scoliosis symptoms
+export const symptomLogs = pgTable("symptom_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teenProfileId: uuid("teen_profile_id").references(() => teenProfiles.id).notNull(),
+  date: date("date").notNull(),
+  curveDiscomfort: integer("curve_discomfort").notNull(), // 1-5 scale
+  backPainLocation: jsonb("back_pain_location").$type<{ x: number; y: number; label?: string }[]>().default([]),
+  newSymptoms: text("new_symptoms"),
+  redFlags: jsonb("red_flags").$type<string[]>().default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Morning briefs table
 export const morningBriefs = pgTable("morning_briefs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -254,6 +313,31 @@ export const insertPtAdherenceLogSchema = createInsertSchema(ptAdherenceLogs).om
   createdAt: true,
 });
 
+export const insertPtExerciseSchema = createInsertSchema(ptExercises).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertPtRoutineExerciseSchema = createInsertSchema(ptRoutineExercises).omit({
+  id: true,
+});
+
+export const insertBraceScheduleSchema = createInsertSchema(braceSchedules).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertBraceWearingLogSchema = createInsertSchema(braceWearingLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertSymptomLogSchema = createInsertSchema(symptomLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertMorningBriefSchema = createInsertSchema(morningBriefs).omit({
   id: true,
   createdAt: true,
@@ -307,6 +391,16 @@ export type PtRoutine = typeof ptRoutines.$inferSelect;
 export type InsertPtRoutine = z.infer<typeof insertPtRoutineSchema>;
 export type PtAdherenceLog = typeof ptAdherenceLogs.$inferSelect;
 export type InsertPtAdherenceLog = z.infer<typeof insertPtAdherenceLogSchema>;
+export type PtExercise = typeof ptExercises.$inferSelect;
+export type InsertPtExercise = z.infer<typeof insertPtExerciseSchema>;
+export type PtRoutineExercise = typeof ptRoutineExercises.$inferSelect;
+export type InsertPtRoutineExercise = z.infer<typeof insertPtRoutineExerciseSchema>;
+export type BraceSchedule = typeof braceSchedules.$inferSelect;
+export type InsertBraceSchedule = z.infer<typeof insertBraceScheduleSchema>;
+export type BraceWearingLog = typeof braceWearingLogs.$inferSelect;
+export type InsertBraceWearingLog = z.infer<typeof insertBraceWearingLogSchema>;
+export type SymptomLog = typeof symptomLogs.$inferSelect;
+export type InsertSymptomLog = z.infer<typeof insertSymptomLogSchema>;
 export type MorningBrief = typeof morningBriefs.$inferSelect;
 export type InsertMorningBrief = z.infer<typeof insertMorningBriefSchema>;
 export type Recommendation = typeof recommendations.$inferSelect;
