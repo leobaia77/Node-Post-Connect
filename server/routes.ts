@@ -633,6 +633,52 @@ export async function registerRoutes(
     }
   });
 
+  // RECOMMENDATIONS ROUTES
+  app.get("/api/recommendations", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+        return res.status(503).json({ error: "AI recommendations service unavailable" });
+      }
+
+      const { date } = req.query;
+      const targetDate = date ? String(date) : format(new Date(), "yyyy-MM-dd");
+
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) {
+        return res.status(404).json({ error: "Profile not found" });
+      }
+
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) {
+        return res.status(404).json({ error: "Teen profile not found" });
+      }
+
+      const { getOrGenerateRecommendations, buildMorningBrief } = await import("./services/llmOrchestrator");
+
+      let recommendations = await getOrGenerateRecommendations(teenProfile.id, targetDate);
+      
+      if (!recommendations) {
+        const brief = await buildMorningBrief(teenProfile.id, targetDate);
+        
+        await storage.createMorningBrief({
+          teenProfileId: teenProfile.id,
+          date: targetDate,
+          briefJson: brief as unknown as Record<string, unknown>,
+        });
+
+        recommendations = await getOrGenerateRecommendations(teenProfile.id, targetDate);
+      }
+
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error("Error generating recommendations:", error);
+      if (error.message?.includes("AI Integrations not configured")) {
+        return res.status(503).json({ error: "AI recommendations service unavailable" });
+      }
+      res.status(500).json({ error: "Failed to generate recommendations" });
+    }
+  });
+
   // SAFETY ALERTS ROUTES
   
   // Get alerts for current teen user

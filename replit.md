@@ -236,3 +236,59 @@ The evidence library provides research-backed health recommendations for the LLM
   ]
 }
 ```
+
+## LLM Orchestrator (AI Recommendations)
+
+### Overview
+The LLM orchestrator generates safe, evidence-based personalized health recommendations using OpenAI GPT models via Replit AI Integrations (no API key required).
+
+### Location
+- Service: `server/services/llmOrchestrator.ts`
+
+### Safety Rules (10 critical rules)
+The system prompt enforces these safety rules:
+1. Never suggest extreme calorie restriction or restrictive dieting
+2. Never recommend fasting for minors
+3. Never suggest supplements, diet pills, or performance-enhancing substances
+4. Never encourage weight loss as a goal for teens
+5. Never provide advice promoting eating disorders
+6. Never suggest unsafe training loads
+7. Never use body-shaming or appearance-focused language
+8. Never claim to diagnose or treat medical conditions
+9. Never suggest hiding anything from parents
+10. Never override parent-set guardrails
+
+### Safety Filter
+- `validateRecommendations()` scans output for prohibited keywords
+- Blocks recommendations containing: diet pills, fasting, weight loss pills, restrictive diet, etc.
+- Verifies all evidence_ids reference valid evidence library entries
+- Filters out blocked items before returning to user
+
+### API Endpoint
+- `GET /api/recommendations?date=YYYY-MM-DD` - Get or generate recommendations for a date
+  - Requires valid morning brief for that date (auto-creates if missing)
+  - Returns cached recommendations if already generated
+  - Uses teen's logged data from past 7 days
+
+### Recommendation Output Schema
+```json
+{
+  "date": "2026-01-30",
+  "today_actions": [
+    {
+      "id": "action-001",
+      "category": "nutrition|training|sleep|recovery|pt",
+      "priority": "high|medium|low",
+      "action": "Brief action text",
+      "evidence_ids": ["nutrition-protein-001"],
+      "why": "Rationale connecting to goals"
+    }
+  ],
+  "week_focus": { "theme": "...", "key_points": [], "evidence_ids": [] },
+  "nutrition_guidance": { "protein_target_range": "75-90g", ... },
+  "training_guidance": { "recommended_volume_today": "moderate", ... },
+  "sleep_guidance": { "target_bedtime": "22:30", ... },
+  "escalation_flags": [{ "type": "consult_professional", "reason": "...", "urgency": "soon" }],
+  "confidence_notes": "..."
+}
+```
