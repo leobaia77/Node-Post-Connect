@@ -4,6 +4,8 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "dev": "expo start",
+    "expo:dev": "expo start --web --port 8081",
     "ios": "expo start --ios",
     "android": "expo start --android",
     "web": "expo start --web"
