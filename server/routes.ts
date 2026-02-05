@@ -4,22 +4,16 @@ import { storage } from "./storage";
 import { db } from "./db";
 import { authMiddleware, generateToken, hashPassword, comparePassword, requireRole, type AuthRequest } from "./auth";
 import { 
-  registerSchema, loginSchema, users, profiles, teenProfiles, parentTeenLinks,
-  parentGuardrails, teenSharingPreferences, dailyCheckins, sleepLogs, workoutLogs,
+  registerSchema, loginSchema, users, profiles, teenProfiles, dailyCheckins, sleepLogs, workoutLogs,
   nutritionLogs, ptRoutines, ptAdherenceLogs, ptRoutineExercises, braceSchedules,
   braceWearingLogs, symptomLogs, morningBriefs, recommendations, safetyAlerts
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { randomBytes } from "crypto";
 import { format, subDays } from "date-fns";
 
 // IMPORTANT: Health data is NOT used for advertising - Apple HealthKit requirement
 // All health data is stored securely and only shared according to user preferences
-
-function generateInviteCode(): string {
-  return randomBytes(4).toString("hex").toUpperCase();
-}
 
 export async function registerRoutes(
   httpServer: Server,
@@ -39,7 +33,7 @@ export async function registerRoutes(
       const user = await storage.createUser({
         email: data.email,
         passwordHash,
-        role: data.role as any,
+        role: (data.role || "user") as any,
       });
 
       const profile = await storage.createProfile({
@@ -47,18 +41,18 @@ export async function registerRoutes(
         displayName: data.displayName,
       });
 
-      let teenProfile = null;
-      if (data.role === "teen") {
-        teenProfile = await storage.createTeenProfile({
+      // Create user profile for health tracking (all regular users)
+      let userProfile = null;
+      if (user.role === "user") {
+        userProfile = await storage.createTeenProfile({
           profileId: profile.id,
-        });
-        await storage.createSharingPreferences({
-          teenProfileId: teenProfile.id,
         });
       }
 
       const token = generateToken({ userId: user.id, role: user.role });
-      res.json({ token, user, profile, teenProfile });
+      // Never return passwordHash to client
+      const { passwordHash: _, ...safeUser } = user;
+      res.json({ token, user: safeUser, profile, userProfile });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors[0].message });
@@ -83,7 +77,9 @@ export async function registerRoutes(
       }
 
       const token = generateToken({ userId: user.id, role: user.role });
-      res.json({ token });
+      // Return user info (without passwordHash) for mobile app
+      const { passwordHash: _, ...safeUser } = user;
+      res.json({ token, user: safeUser });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors[0].message });
@@ -100,12 +96,14 @@ export async function registerRoutes(
       }
 
       const profile = await storage.getProfile(user.id);
-      let teenProfile = null;
-      if (user.role === "teen" && profile) {
-        teenProfile = await storage.getTeenProfile(profile.id);
+      let userProfile = null;
+      if (user.role === "user" && profile) {
+        userProfile = await storage.getTeenProfile(profile.id);
       }
 
-      res.json({ user, profile, teenProfile });
+      // Never return passwordHash to client
+      const { passwordHash: _, ...safeUser } = user;
+      res.json({ user: safeUser, profile, userProfile });
     } catch (error) {
       res.status(500).json({ error: "Failed to get user" });
     }
@@ -130,8 +128,8 @@ export async function registerRoutes(
     }
   });
 
-  // TEEN GOALS ROUTES
-  app.get("/api/teen/goals", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  // USER GOALS ROUTES
+  app.get("/api/goals", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) {
@@ -144,7 +142,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/teen/goals", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/goals", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) {
@@ -164,7 +162,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/teen/goals", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.put("/api/goals", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) {
@@ -174,167 +172,6 @@ export async function registerRoutes(
       res.json(teenProfile);
     } catch (error) {
       res.status(500).json({ error: "Failed to update goals" });
-    }
-  });
-
-  // PARENT-TEEN LINK ROUTES
-  app.post("/api/link/generate-code", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const inviteCode = generateInviteCode();
-      const link = await storage.createLink({
-        parentUserId: req.user!.userId,
-        inviteCode,
-        status: "pending",
-        supervisionLevel: "summary_only",
-      });
-      await storage.createGuardrails({ linkId: link.id });
-      res.json({ inviteCode: link.inviteCode, link });
-    } catch (error) {
-      console.error("Generate code error:", error);
-      res.status(500).json({ error: "Failed to generate invite code" });
-    }
-  });
-
-  app.post("/api/link/accept", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
-    try {
-      const { inviteCode } = req.body;
-      const link = await storage.getLinkByCode(inviteCode);
-      if (!link) {
-        return res.status(404).json({ error: "Invalid invite code" });
-      }
-      if (link.status !== "pending") {
-        return res.status(400).json({ error: "This code has already been used" });
-      }
-
-      const updatedLink = await storage.updateLink(link.id, {
-        teenUserId: req.user!.userId,
-        status: "active",
-      });
-      res.json(updatedLink);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to accept invite" });
-    }
-  });
-
-  app.get("/api/link/status", authMiddleware, async (req: AuthRequest, res) => {
-    try {
-      if (req.user!.role === "parent") {
-        const links = await storage.getLinksByParent(req.user!.userId);
-        const linkedTeens = [];
-        const pendingLinks = [];
-
-        for (const link of links) {
-          if (link.status === "pending") {
-            pendingLinks.push(link);
-          } else if (link.teenUserId) {
-            const teenProfile = await storage.getProfile(link.teenUserId);
-            const teenData = teenProfile ? await storage.getTeenProfile(teenProfile.id) : null;
-            
-            const today = format(new Date(), "yyyy-MM-dd");
-            const weekAgo = format(subDays(new Date(), 7), "yyyy-MM-dd");
-            
-            let stats = { avgSleepHours: 0, weeklyTrainingMinutes: 0, recentCheckin: null as any };
-            
-            if (teenData) {
-              const sleepLogs = await storage.getSleepLogs(teenData.id, weekAgo, today);
-              const workoutLogs = await storage.getWorkoutLogs(teenData.id, weekAgo, today);
-              const checkins = await storage.getCheckins(teenData.id, weekAgo, today);
-              
-              stats.avgSleepHours = sleepLogs.length > 0
-                ? sleepLogs.reduce((sum, log) => sum + Number(log.totalHours || 0), 0) / sleepLogs.length
-                : 0;
-              stats.weeklyTrainingMinutes = workoutLogs.reduce((sum, log) => sum + log.durationMinutes, 0);
-              stats.recentCheckin = checkins[0] ? {
-                energyLevel: checkins[0].energyLevel,
-                moodLevel: checkins[0].moodLevel,
-              } : null;
-            }
-
-            linkedTeens.push({
-              link,
-              profile: {
-                displayName: teenProfile?.displayName || "Unknown",
-                ageRange: teenProfile?.ageRange || "",
-              },
-              stats,
-            });
-          }
-        }
-
-        res.json({ linkedTeens, pendingLinks });
-      } else {
-        const links = await storage.getLinksByTeen(req.user!.userId);
-        res.json({ links });
-      }
-    } catch (error) {
-      console.error("Link status error:", error);
-      res.status(500).json({ error: "Failed to get link status" });
-    }
-  });
-
-  // GUARDRAILS ROUTES
-  app.get("/api/guardrails", authMiddleware, async (req: AuthRequest, res) => {
-    try {
-      const linkId = req.query.linkId as string;
-      if (!linkId) {
-        return res.status(400).json({ error: "Link ID required" });
-      }
-      const guardrails = await storage.getGuardrails(linkId);
-      res.json(guardrails || null);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get guardrails" });
-    }
-  });
-
-  app.post("/api/guardrails", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const guardrails = await storage.createGuardrails(req.body);
-      res.json(guardrails);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to create guardrails" });
-    }
-  });
-
-  app.put("/api/guardrails", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const { linkId, guardrails: data } = req.body;
-      const guardrails = await storage.updateGuardrails(linkId, data);
-      res.json(guardrails);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update guardrails" });
-    }
-  });
-
-  // SHARING PREFERENCES ROUTES
-  app.get("/api/sharing-preferences", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
-    try {
-      const profile = await storage.getProfile(req.user!.userId);
-      if (!profile) return res.json(null);
-      const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.json(null);
-      const prefs = await storage.getSharingPreferences(teenProfile.id);
-      res.json(prefs || null);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get sharing preferences" });
-    }
-  });
-
-  app.put("/api/sharing-preferences", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
-    try {
-      const profile = await storage.getProfile(req.user!.userId);
-      if (!profile) return res.status(404).json({ error: "Profile not found" });
-      const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
-      
-      let prefs = await storage.getSharingPreferences(teenProfile.id);
-      if (!prefs) {
-        prefs = await storage.createSharingPreferences({ teenProfileId: teenProfile.id, ...req.body });
-      } else {
-        prefs = await storage.updateSharingPreferences(teenProfile.id, req.body);
-      }
-      res.json(prefs);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to update sharing preferences" });
     }
   });
 
@@ -356,12 +193,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/checkin", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/checkin", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) return res.status(404).json({ error: "Profile not found" });
       const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+      if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
       const today = format(new Date(), "yyyy-MM-dd");
       const checkin = await storage.createCheckin({
@@ -404,12 +241,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/sleep", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/sleep", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) return res.status(404).json({ error: "Profile not found" });
       const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+      if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
       const log = await storage.createSleepLog({
         teenProfileId: teenProfile.id,
@@ -440,12 +277,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/workout", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/workout", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) return res.status(404).json({ error: "Profile not found" });
       const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+      if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
       const log = await storage.createWorkoutLog({
         teenProfileId: teenProfile.id,
@@ -476,12 +313,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/nutrition", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/nutrition", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) return res.status(404).json({ error: "Profile not found" });
       const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+      if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
       const log = await storage.createNutritionLog({
         teenProfileId: teenProfile.id,
@@ -509,12 +346,12 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pt-routine", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/pt-routine", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) return res.status(404).json({ error: "Profile not found" });
       const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
+      if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
       const routine = await storage.createPtRoutine({
         teenProfileId: teenProfile.id,
@@ -542,7 +379,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/pt-adherence", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/pt-adherence", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const log = await storage.createPtAdherenceLog(req.body);
       res.json(log);
@@ -566,32 +403,9 @@ export async function registerRoutes(
     }
   });
 
-  app.get("/api/parent/alerts", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const links = await storage.getLinksByParent(req.user!.userId);
-      const activeLinks = links.filter(l => l.status === "active" && l.teenUserId);
-      
-      const allAlerts = [];
-      for (const link of activeLinks) {
-        const profile = await storage.getProfile(link.teenUserId!);
-        if (!profile) continue;
-        const teenProfile = await storage.getTeenProfile(profile.id);
-        if (!teenProfile) continue;
-        const alerts = await storage.getUnacknowledgedAlerts(teenProfile.id);
-        allAlerts.push(...alerts);
-      }
-
-      res.json(allAlerts);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get parent alerts" });
-    }
-  });
-
   app.put("/api/safety-alerts/:id/acknowledge", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const isTeen = req.user!.role === "teen";
-      const isParent = req.user!.role === "parent";
-      const alert = await storage.acknowledgeAlert(req.params.id, isTeen, isParent);
+      const alert = await storage.acknowledgeAlert(req.params.id);
       res.json(alert);
     } catch (error) {
       res.status(500).json({ error: "Failed to acknowledge alert" });
@@ -599,7 +413,7 @@ export async function registerRoutes(
   });
 
   // HEALTH SYNC ROUTES (Apple HealthKit)
-  app.post("/api/health-sync", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/health-sync", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const { sleep, workouts, activity, nutrition } = req.body;
       
@@ -804,7 +618,7 @@ export async function registerRoutes(
   });
 
   // Action completion tracking (stored client-side, this just acknowledges)
-  app.post("/api/recommendations/actions/complete", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.post("/api/recommendations/actions/complete", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const { actionId, completed } = req.body;
       
@@ -829,7 +643,7 @@ export async function registerRoutes(
   // SAFETY ALERTS ROUTES
   
   // Get alerts for current teen user
-  app.get("/api/safety-alerts", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  app.get("/api/safety-alerts", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) {
@@ -877,80 +691,8 @@ export async function registerRoutes(
     }
   });
 
-  // Get alerts for parent (only alerts marked as shareWithParent)
-  app.get("/api/parent/alerts", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const links = await storage.getLinksByParent(req.user!.userId);
-      const allAlerts = [];
-
-      for (const link of links) {
-        if (link.status !== "active" || !link.teenUserId) continue;
-
-        const profile = await storage.getProfile(link.teenUserId);
-        if (!profile) continue;
-
-        const teenProfile = await storage.getTeenProfile(profile.id);
-        if (!teenProfile) continue;
-
-        const alerts = await storage.getParentVisibleAlerts(teenProfile.id);
-        allAlerts.push(...alerts.map(alert => ({
-          ...alert,
-          teenName: profile.displayName,
-          teenProfileId: teenProfile.id,
-        })));
-      }
-
-      // Sort by createdAt descending
-      allAlerts.sort((a, b) => 
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-
-      res.json(allAlerts);
-    } catch (error) {
-      console.error("Error fetching parent alerts:", error);
-      res.status(500).json({ error: "Failed to get parent alerts" });
-    }
-  });
-
-  // Parent acknowledges an alert
-  app.put("/api/parent/alerts/:id/acknowledge", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const { id } = req.params;
-      const alert = await storage.getAlertById(id);
-      
-      if (!alert) {
-        return res.status(404).json({ error: "Alert not found" });
-      }
-
-      // Verify parent has access to this teen's alerts
-      const links = await storage.getLinksByParent(req.user!.userId);
-      let hasAccess = false;
-
-      for (const link of links) {
-        if (link.status !== "active" || !link.teenUserId) continue;
-        const profile = await storage.getProfile(link.teenUserId);
-        if (!profile) continue;
-        const teenProfile = await storage.getTeenProfile(profile.id);
-        if (teenProfile && teenProfile.id === alert.teenProfileId) {
-          hasAccess = true;
-          break;
-        }
-      }
-
-      if (!hasAccess) {
-        return res.status(403).json({ error: "Not authorized to acknowledge this alert" });
-      }
-
-      const updated = await storage.acknowledgeAlert(id, false, true);
-      res.json(updated);
-    } catch (error) {
-      console.error("Error acknowledging parent alert:", error);
-      res.status(500).json({ error: "Failed to acknowledge alert" });
-    }
-  });
-
-  // Trigger safety check for a teen (for testing/manual trigger)
-  app.post("/api/safety-check", authMiddleware, requireRole("teen"), async (req: AuthRequest, res) => {
+  // Trigger safety check (for testing/manual trigger)
+  app.post("/api/safety-check", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) {
@@ -972,54 +714,6 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error running safety check:", error);
       res.status(500).json({ error: "Failed to run safety check" });
-    }
-  });
-
-  // PARENT DASHBOARD ROUTE
-  app.get("/api/parent/dashboard", authMiddleware, requireRole("parent"), async (req: AuthRequest, res) => {
-    try {
-      const links = await storage.getLinksByParent(req.user!.userId);
-      const dashboard = [];
-
-      for (const link of links) {
-        if (link.status !== "active" || !link.teenUserId) continue;
-
-        const profile = await storage.getProfile(link.teenUserId);
-        if (!profile) continue;
-        const teenProfile = await storage.getTeenProfile(profile.id);
-        if (!teenProfile) continue;
-        const sharingPrefs = await storage.getSharingPreferences(teenProfile.id);
-
-        const today = format(new Date(), "yyyy-MM-dd");
-        const weekAgo = format(subDays(new Date(), 7), "yyyy-MM-dd");
-
-        const data: any = { link, profile, teenProfile };
-
-        if (sharingPrefs?.shareSleepTrend) {
-          const sleepLogs = await storage.getSleepLogs(teenProfile.id, weekAgo, today);
-          data.avgSleepHours = sleepLogs.length > 0
-            ? sleepLogs.reduce((sum, log) => sum + Number(log.totalHours || 0), 0) / sleepLogs.length
-            : 0;
-        }
-
-        if (sharingPrefs?.shareTrainingTrend) {
-          const workoutLogs = await storage.getWorkoutLogs(teenProfile.id, weekAgo, today);
-          data.weeklyTrainingMinutes = workoutLogs.reduce((sum, log) => sum + log.durationMinutes, 0);
-        }
-
-        if (sharingPrefs?.shareNutritionTrend) {
-          const nutritionLogs = await storage.getNutritionLogs(teenProfile.id, weekAgo, today);
-          data.avgDailyCalories = nutritionLogs.length > 0
-            ? nutritionLogs.reduce((sum, log) => sum + (log.calories || 0), 0) / 7
-            : 0;
-        }
-
-        dashboard.push(data);
-      }
-
-      res.json(dashboard);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get parent dashboard" });
     }
   });
 
@@ -1536,28 +1230,28 @@ export async function registerRoutes(
         },
       };
 
-      // If teen user, export all health data
-      if (user.role === "teen") {
-        const teenProfile = await storage.getTeenProfileByUserId(user.id);
-        if (teenProfile) {
+      // Export all health data for users
+      if (user.role === "user") {
+        const userProfile = await storage.getTeenProfileByUserId(user.id);
+        if (userProfile) {
           const startDate = "2020-01-01";
           const endDate = format(new Date(), "yyyy-MM-dd");
 
-          exportData.teenProfile = {
-            goals: teenProfile.goals,
-            goalWeights: teenProfile.goalWeights,
-            sports: teenProfile.sports,
-            weeklyAvailability: teenProfile.weeklyAvailability,
-            hasScoliosisSupport: teenProfile.hasScoliosisSupport,
+          exportData.userProfile = {
+            goals: userProfile.goals,
+            goalWeights: userProfile.goalWeights,
+            sports: userProfile.sports,
+            weeklyAvailability: userProfile.weeklyAvailability,
+            hasScoliosisSupport: userProfile.hasScoliosisSupport,
           };
 
           // Fetch all health logs
           const [checkins, sleepLogs, workoutLogs, nutritionLogs, ptRoutines] = await Promise.all([
-            storage.getCheckins(teenProfile.id, startDate, endDate),
-            storage.getSleepLogs(teenProfile.id, startDate, endDate),
-            storage.getWorkoutLogs(teenProfile.id, startDate, endDate),
-            storage.getNutritionLogs(teenProfile.id, startDate, endDate),
-            storage.getPtRoutines(teenProfile.id),
+            storage.getCheckins(userProfile.id, startDate, endDate),
+            storage.getSleepLogs(userProfile.id, startDate, endDate),
+            storage.getWorkoutLogs(userProfile.id, startDate, endDate),
+            storage.getNutritionLogs(userProfile.id, startDate, endDate),
+            storage.getPtRoutines(userProfile.id),
           ]);
 
           exportData.dailyCheckins = checkins;
@@ -1566,7 +1260,7 @@ export async function registerRoutes(
           exportData.nutritionLogs = nutritionLogs;
           exportData.ptRoutines = ptRoutines;
 
-          // Fetch PT adherence logs for all routines (always, not just scoliosis)
+          // Fetch PT adherence logs for all routines
           if (ptRoutines.length > 0) {
             const ptAdherenceLogs = await Promise.all(
               ptRoutines.map(routine => storage.getPtAdherenceLogs(routine.id, startDate, endDate))
@@ -1575,11 +1269,11 @@ export async function registerRoutes(
           }
 
           // Fetch scoliosis data if enabled
-          if (teenProfile.hasScoliosisSupport) {
+          if (userProfile.hasScoliosisSupport) {
             const [braceSchedule, braceLogs, symptomLogs] = await Promise.all([
-              storage.getBraceSchedule(teenProfile.id),
-              storage.getBraceWearingLogsByRange(teenProfile.id, startDate, endDate),
-              storage.getSymptomLogs(teenProfile.id, startDate, endDate),
+              storage.getBraceSchedule(userProfile.id),
+              storage.getBraceWearingLogsByRange(userProfile.id, startDate, endDate),
+              storage.getSymptomLogs(userProfile.id, startDate, endDate),
             ]);
 
             exportData.braceSchedule = braceSchedule;
@@ -1587,29 +1281,10 @@ export async function registerRoutes(
             exportData.symptomLogs = symptomLogs;
           }
 
-          // Fetch sharing preferences
-          const sharingPrefs = await storage.getSharingPreferences(teenProfile.id);
-          exportData.sharingPreferences = sharingPrefs;
-
           // Fetch safety alerts
-          const alerts = await storage.getSafetyAlerts(teenProfile.id);
+          const alerts = await storage.getSafetyAlerts(userProfile.id);
           exportData.safetyAlerts = alerts;
         }
-      }
-
-      // If parent user, export linked teen data visibility
-      if (user.role === "parent") {
-        const links = await storage.getLinksByParent(user.id);
-        exportData.parentTeenLinks = links.map(link => ({
-          status: link.status,
-          supervisionLevel: link.supervisionLevel,
-          createdAt: link.createdAt,
-        }));
-
-        const guardrails = await Promise.all(
-          links.filter(l => l.status === "active").map(l => storage.getGuardrails(l.id))
-        );
-        exportData.guardrails = guardrails.filter(Boolean);
       }
 
       if (formatType === "csv") {
@@ -1667,60 +1342,41 @@ export async function registerRoutes(
       const profile = await storage.getProfile(user.id);
       
       // Delete all associated data in correct order (respecting foreign keys)
-      if (user.role === "teen" && profile) {
-        const teenProfile = await storage.getTeenProfile(profile.id);
-        if (teenProfile) {
-          // Delete health logs first (they reference teen profile)
-          await db.delete(dailyCheckins).where(eq(dailyCheckins.teenProfileId, teenProfile.id));
-          await db.delete(sleepLogs).where(eq(sleepLogs.teenProfileId, teenProfile.id));
-          await db.delete(workoutLogs).where(eq(workoutLogs.teenProfileId, teenProfile.id));
-          await db.delete(nutritionLogs).where(eq(nutritionLogs.teenProfileId, teenProfile.id));
+      if (user.role === "user" && profile) {
+        const userProfile = await storage.getTeenProfile(profile.id);
+        if (userProfile) {
+          // Delete health logs first (they reference user profile)
+          await db.delete(dailyCheckins).where(eq(dailyCheckins.teenProfileId, userProfile.id));
+          await db.delete(sleepLogs).where(eq(sleepLogs.teenProfileId, userProfile.id));
+          await db.delete(workoutLogs).where(eq(workoutLogs.teenProfileId, userProfile.id));
+          await db.delete(nutritionLogs).where(eq(nutritionLogs.teenProfileId, userProfile.id));
           
           // Delete PT routines and adherence logs
-          const routines = await storage.getPtRoutines(teenProfile.id);
+          const routines = await storage.getPtRoutines(userProfile.id);
           for (const routine of routines) {
             await db.delete(ptRoutineExercises).where(eq(ptRoutineExercises.routineId, routine.id));
             await db.delete(ptAdherenceLogs).where(eq(ptAdherenceLogs.routineId, routine.id));
           }
-          await db.delete(ptRoutines).where(eq(ptRoutines.teenProfileId, teenProfile.id));
+          await db.delete(ptRoutines).where(eq(ptRoutines.teenProfileId, userProfile.id));
           
           // Delete scoliosis data
-          await db.delete(braceWearingLogs).where(eq(braceWearingLogs.teenProfileId, teenProfile.id));
-          await db.delete(braceSchedules).where(eq(braceSchedules.teenProfileId, teenProfile.id));
-          await db.delete(symptomLogs).where(eq(symptomLogs.teenProfileId, teenProfile.id));
+          await db.delete(braceWearingLogs).where(eq(braceWearingLogs.teenProfileId, userProfile.id));
+          await db.delete(braceSchedules).where(eq(braceSchedules.teenProfileId, userProfile.id));
+          await db.delete(symptomLogs).where(eq(symptomLogs.teenProfileId, userProfile.id));
           
           // Delete morning briefs and recommendations
-          const briefs = await db.select().from(morningBriefs).where(eq(morningBriefs.teenProfileId, teenProfile.id));
+          const briefs = await db.select().from(morningBriefs).where(eq(morningBriefs.teenProfileId, userProfile.id));
           for (const brief of briefs) {
             await db.delete(recommendations).where(eq(recommendations.morningBriefId, brief.id));
           }
-          await db.delete(morningBriefs).where(eq(morningBriefs.teenProfileId, teenProfile.id));
+          await db.delete(morningBriefs).where(eq(morningBriefs.teenProfileId, userProfile.id));
           
           // Delete safety alerts
-          await db.delete(safetyAlerts).where(eq(safetyAlerts.teenProfileId, teenProfile.id));
+          await db.delete(safetyAlerts).where(eq(safetyAlerts.teenProfileId, userProfile.id));
           
-          // Delete sharing preferences
-          await db.delete(teenSharingPreferences).where(eq(teenSharingPreferences.teenProfileId, teenProfile.id));
-          
-          // Delete parent-teen links where this teen is linked
-          const links = await storage.getLinksByTeen(user.id);
-          for (const link of links) {
-            await db.delete(parentGuardrails).where(eq(parentGuardrails.linkId, link.id));
-          }
-          await db.delete(parentTeenLinks).where(eq(parentTeenLinks.teenUserId, user.id));
-          
-          // Delete teen profile
-          await db.delete(teenProfiles).where(eq(teenProfiles.id, teenProfile.id));
+          // Delete user profile
+          await db.delete(teenProfiles).where(eq(teenProfiles.id, userProfile.id));
         }
-      }
-
-      if (user.role === "parent") {
-        // Delete parent-teen links and guardrails
-        const links = await storage.getLinksByParent(user.id);
-        for (const link of links) {
-          await db.delete(parentGuardrails).where(eq(parentGuardrails.linkId, link.id));
-        }
-        await db.delete(parentTeenLinks).where(eq(parentTeenLinks.parentUserId, user.id));
       }
 
       // Delete profile and user

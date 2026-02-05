@@ -56,7 +56,7 @@ export default function SportsScreen() {
   const handleContinue = async () => {
     try {
       await updateProfile.mutateAsync({ sports } as never);
-      router.push('/(teen-onboarding)/availability');
+      router.push('/(onboarding)/availability');
     } catch {
     }
   };

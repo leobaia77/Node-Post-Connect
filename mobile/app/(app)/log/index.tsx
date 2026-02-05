@@ -11,7 +11,7 @@ const LOG_OPTIONS = [
     icon: 'nutrition',
     color: '#10B981',
     bgColor: '#D1FAE5',
-    route: '/(teen-app)/log/meal-log',
+    route: '/(app)/log/meal-log',
   },
   {
     id: 'workout',
@@ -20,7 +20,7 @@ const LOG_OPTIONS = [
     icon: 'barbell',
     color: '#F59E0B',
     bgColor: '#FEF3C7',
-    route: '/(teen-app)/log/workout-log',
+    route: '/(app)/log/workout-log',
   },
   {
     id: 'pt',
@@ -29,7 +29,7 @@ const LOG_OPTIONS = [
     icon: 'fitness',
     color: '#3B82F6',
     bgColor: '#DBEAFE',
-    route: '/(teen-app)/log/pt-log',
+    route: '/(app)/log/pt-log',
   },
   {
     id: 'checkin',
@@ -38,7 +38,7 @@ const LOG_OPTIONS = [
     icon: 'heart',
     color: '#EF4444',
     bgColor: '#FEE2E2',
-    route: '/(teen-app)/log/checkin',
+    route: '/(app)/log/checkin',
   },
 ];
 

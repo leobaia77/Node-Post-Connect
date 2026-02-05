@@ -7,10 +7,8 @@ import { z } from "zod";
 // All health data is stored securely and only shared according to user preferences
 
 // Enums
-export const userRoleEnum = pgEnum("user_role", ["teen", "parent", "admin"]);
+export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const ageRangeEnum = pgEnum("age_range", ["13-14", "15-16", "17-19"]);
-export const linkStatusEnum = pgEnum("link_status", ["pending", "active", "revoked"]);
-export const supervisionLevelEnum = pgEnum("supervision_level", ["summary_only", "detailed"]);
 export const dataSourceEnum = pgEnum("data_source", ["manual", "apple_health", "other"]);
 export const workoutTypeEnum = pgEnum("workout_type", ["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other"]);
 export const mealTypeEnum = pgEnum("meal_type", ["breakfast", "lunch", "dinner", "snack"]);
@@ -22,7 +20,7 @@ export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
-  role: userRoleEnum("role").notNull().default("teen"),
+  role: userRoleEnum("role").notNull().default("user"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -51,37 +49,8 @@ export const teenProfiles = pgTable("teen_profiles", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-// Parent-teen links table
-export const parentTeenLinks = pgTable("parent_teen_links", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  parentUserId: uuid("parent_user_id").references(() => users.id).notNull(),
-  teenUserId: uuid("teen_user_id").references(() => users.id),
-  inviteCode: varchar("invite_code", { length: 20 }).unique().notNull(),
-  status: linkStatusEnum("status").default("pending").notNull(),
-  supervisionLevel: supervisionLevelEnum("supervision_level").default("summary_only").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-// Parent guardrails table
-export const parentGuardrails = pgTable("parent_guardrails", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  linkId: uuid("link_id").references(() => parentTeenLinks.id).notNull().unique(),
-  maxWeeklyTrainingMinutes: integer("max_weekly_training_minutes"),
-  minNightlySleepHours: decimal("min_nightly_sleep_hours", { precision: 3, scale: 1 }).default("8.0"),
-  noWeightLossMode: boolean("no_weight_loss_mode").default(true),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-// Teen sharing preferences table
-export const teenSharingPreferences = pgTable("teen_sharing_preferences", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  teenProfileId: uuid("teen_profile_id").references(() => teenProfiles.id).notNull().unique(),
-  shareSleepTrend: boolean("share_sleep_trend").default(true),
-  shareTrainingTrend: boolean("share_training_trend").default(true),
-  shareNutritionTrend: boolean("share_nutrition_trend").default(true),
-  shareDetailedLogs: boolean("share_detailed_logs").default(false),
-});
+// Note: Parent-teen links, parent guardrails, and teen sharing preferences tables
+// have been removed as the app now uses simplified user/admin roles only
 
 // Daily check-ins table
 export const dailyCheckins = pgTable("daily_checkins", {
@@ -243,9 +212,7 @@ export const safetyAlerts = pgTable("safety_alerts", {
   alertType: alertTypeEnum("alert_type").notNull(),
   severity: severityEnum("severity").notNull(),
   message: text("message").notNull(),
-  shareWithParent: boolean("share_with_parent").default(true),
-  acknowledgedByTeen: boolean("acknowledged_by_teen").default(false),
-  acknowledgedByParent: boolean("acknowledged_by_parent").default(false),
+  acknowledged: boolean("acknowledged").default(false),
   resourceLink: text("resource_link"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -267,20 +234,6 @@ export const insertTeenProfileSchema = createInsertSchema(teenProfiles).omit({
   createdAt: true,
 });
 
-export const insertParentTeenLinkSchema = createInsertSchema(parentTeenLinks).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertParentGuardrailsSchema = createInsertSchema(parentGuardrails).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
-
-export const insertTeenSharingPreferencesSchema = createInsertSchema(teenSharingPreferences).omit({
-  id: true,
-});
 
 export const insertDailyCheckinSchema = createInsertSchema(dailyCheckins).omit({
   id: true,
@@ -357,7 +310,7 @@ export const insertSafetyAlertSchema = createInsertSchema(safetyAlerts).omit({
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["teen", "parent", "admin"]),
+  role: z.enum(["user", "admin"]).default("user"),
   displayName: z.string().min(2).max(100),
 });
 
@@ -373,12 +326,6 @@ export type Profile = typeof profiles.$inferSelect;
 export type InsertProfile = z.infer<typeof insertProfileSchema>;
 export type TeenProfile = typeof teenProfiles.$inferSelect;
 export type InsertTeenProfile = z.infer<typeof insertTeenProfileSchema>;
-export type ParentTeenLink = typeof parentTeenLinks.$inferSelect;
-export type InsertParentTeenLink = z.infer<typeof insertParentTeenLinkSchema>;
-export type ParentGuardrails = typeof parentGuardrails.$inferSelect;
-export type InsertParentGuardrails = z.infer<typeof insertParentGuardrailsSchema>;
-export type TeenSharingPreferences = typeof teenSharingPreferences.$inferSelect;
-export type InsertTeenSharingPreferences = z.infer<typeof insertTeenSharingPreferencesSchema>;
 export type DailyCheckin = typeof dailyCheckins.$inferSelect;
 export type InsertDailyCheckin = z.infer<typeof insertDailyCheckinSchema>;
 export type SleepLog = typeof sleepLogs.$inferSelect;

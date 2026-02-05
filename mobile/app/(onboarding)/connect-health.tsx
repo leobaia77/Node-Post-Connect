@@ -29,7 +29,8 @@ export default function ConnectHealthScreen() {
 
   const handleConnect = async () => {
     if (Platform.OS !== 'ios') {
-      router.push('/(teen-onboarding)/link-parent');
+      // HealthKit only available on iOS, skip to main app
+      router.replace('/(tabs)');
       return;
     }
 
@@ -44,12 +45,12 @@ export default function ConnectHealthScreen() {
     setIsConnecting(false);
     
     if (success) {
-      router.push('/(teen-onboarding)/link-parent');
+      router.replace('/(tabs)');
     }
   };
 
   const handleSkip = () => {
-    router.push('/(teen-onboarding)/link-parent');
+    router.replace('/(tabs)');
   };
 
   const handleBack = () => {

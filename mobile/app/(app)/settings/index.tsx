@@ -10,29 +10,28 @@ const SETTINGS_SECTIONS = [
   {
     title: 'Preferences',
     items: [
-      { id: 'goals', title: 'Goals & Priorities', icon: 'flag', route: '/(teen-app)/settings/goals' },
-      { id: 'sharing', title: 'Privacy & Sharing', icon: 'lock-closed', route: '/(teen-app)/settings/sharing' },
-      { id: 'notifications', title: 'Notifications', icon: 'notifications', route: '/(teen-app)/settings/notifications' },
+      { id: 'goals', title: 'Goals & Priorities', icon: 'flag', route: '/(app)/settings/goals' },
+      { id: 'notifications', title: 'Notifications', icon: 'notifications', route: '/(app)/settings/notifications' },
     ],
   },
   {
     title: 'Connections',
     items: [
-      { id: 'health', title: 'Apple Health', icon: 'heart', route: '/(teen-app)/settings/connections' },
+      { id: 'health', title: 'Apple Health', icon: 'heart', route: '/(app)/settings/connections' },
     ],
   },
   {
     title: 'Your Data',
     items: [
-      { id: 'export', title: 'Export My Data', icon: 'download', route: '/(teen-app)/settings/data-export' },
-      { id: 'account', title: 'Account Settings', icon: 'person', route: '/(teen-app)/settings/account' },
+      { id: 'export', title: 'Export My Data', icon: 'download', route: '/(app)/settings/data-export' },
+      { id: 'account', title: 'Account Settings', icon: 'person', route: '/(app)/settings/account' },
     ],
   },
   {
     title: 'Legal',
     items: [
-      { id: 'privacy', title: 'Privacy Policy', icon: 'shield-checkmark', route: '/(teen-app)/settings/privacy-policy' },
-      { id: 'terms', title: 'Terms of Service', icon: 'document-text', route: '/(teen-app)/settings/terms' },
+      { id: 'privacy', title: 'Privacy Policy', icon: 'shield-checkmark', route: '/(app)/settings/privacy-policy' },
+      { id: 'terms', title: 'Terms of Service', icon: 'document-text', route: '/(app)/settings/terms' },
     ],
   },
 ];

@@ -11,33 +11,29 @@ import {
 } from 'react-native';
 import { Link } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, Input, Card, Select } from '@/components/ui';
+import { Button, Input, Card } from '@/components/ui';
 import { useAuth } from '@/hooks/useAuth';
 
-const ROLE_OPTIONS = [
-  { label: 'Teen Athlete', value: 'teen' },
-  { label: 'Parent', value: 'parent' },
-];
+// No role selection needed - users register as "user" role by default
 
 export default function RegisterScreen() {
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const { register, isLoading, error } = useAuth();
 
   const handleRegister = async () => {
-    if (!displayName.trim() || !email.trim() || !password || !role) {
+    if (!displayName.trim() || !email.trim() || !password) {
       return;
     }
     try {
-      await register(email.trim(), password, displayName.trim(), role as 'teen' | 'parent');
+      await register(email.trim(), password, displayName.trim(), 'user');
     } catch {
     }
   };
 
-  const isValid = displayName.trim() && email.trim() && password && role;
+  const isValid = displayName.trim() && email.trim() && password;
 
   return (
     <SafeAreaView style={styles.safe}>
@@ -106,15 +102,6 @@ export default function RegisterScreen() {
                 />
               </TouchableOpacity>
             </View>
-
-            <Select
-              label="I am a..."
-              placeholder="Select your role"
-              options={ROLE_OPTIONS}
-              value={role}
-              onValueChange={setRole}
-              testID="select-register-role"
-            />
 
             <Button
               title="Create Account"

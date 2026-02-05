@@ -54,7 +54,7 @@ export default function GoalsScreen() {
     
     try {
       await updateGoals.mutateAsync(selectedGoals);
-      router.push('/(teen-onboarding)/sports');
+      router.push('/(onboarding)/sports');
     } catch {
     }
   };

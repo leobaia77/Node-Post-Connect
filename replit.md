@@ -1,7 +1,7 @@
-# GrowthTrack - Teen Health Tracking App
+# GrowthTrack - Health Tracking App
 
 ## Overview
-GrowthTrack is a health tracking application designed for teen athletes with integrated parent oversight. It allows teens to log and monitor key health metrics like sleep, workouts, nutrition, and daily check-ins. Parents can supervise their children's health data through configurable guardrails and sharing preferences, ensuring appropriate monitoring without compromising privacy. The project aims to provide personalized, evidence-based recommendations to teens while ensuring safety and compliance with health data regulations (e.g., Apple HealthKit).
+GrowthTrack is a health tracking application designed for athletes. Users can log and monitor key health metrics like sleep, workouts, nutrition, and daily check-ins. The project provides personalized, evidence-based recommendations while ensuring safety and compliance with health data regulations (e.g., Apple HealthKit).
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -15,7 +15,7 @@ This project uses a **mobile-first architecture** with:
 
 ### Backend (This Project)
 - **Framework:** Express.js with TypeScript, providing RESTful API endpoints.
-- **Authentication:** JWT-based token authentication with bcryptjs for password hashing. Role-based access control is enforced through middleware, and an invite code system links parent and teen accounts.
+- **Authentication:** JWT-based token authentication with bcryptjs for password hashing. Role-based access control enforced via middleware with two roles: 'user' (standard users) and 'admin' (administrators).
 - **CORS:** Enabled for cross-origin mobile app connections.
 - **Build:** esbuild for production bundling, optimized for cold start performance.
 
@@ -32,11 +32,9 @@ This project uses a **mobile-first architecture** with:
 - **Connection:** Node-postgres (pg) pool.
 
 ### Key Features
-- **User & Profile Management:** Role-based (teen, parent, admin) with distinct profiles and goals.
-- **Parent-Teen Linking:** Secure invite code system with configurable supervision levels.
-- **Parent Guardrails:** Customizable limits for training, sleep, and nutrition to ensure teen safety.
+- **User & Profile Management:** Role-based (user, admin) with health tracking profiles and customizable goals.
 - **Health Logging:** Comprehensive logging for daily check-ins, sleep, workouts, and nutrition.
-- **Safety Alert System:** Monitors health data against predefined rules to generate non-shame-based alerts for concerning patterns (e.g., sleep deficit, overtraining, pain flags). Alerts are scheduled daily, localized by timezone, and support push notifications via Expo Push API.
+- **Safety Alert System:** Monitors health data against predefined rules to generate supportive alerts for concerning patterns (e.g., sleep deficit, overtraining, pain flags). Alerts support push notifications via Expo Push API.
 - **AI Recommendations (LLM Orchestrator):** Generates personalized, evidence-based health recommendations using OpenAI GPT models (via Replit AI Integrations). It incorporates a strict safety filter to prevent harmful advice (e.g., extreme dieting, unapproved supplements) and validates all recommendations against an internal evidence library.
 - **Evidence Library:** A RAG-based system providing research-backed health recommendations from authoritative sources across categories like sleep, nutrition, training, bone health, and scoliosis, used to ground LLM outputs.
 - **Scoliosis Care Module:** Comprehensive scoliosis management including:

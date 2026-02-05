@@ -1,4 +1,4 @@
-export type UserRole = 'teen' | 'parent' | 'admin';
+export type UserRole = 'user' | 'admin';
 
 export interface User {
   id: number;
@@ -13,7 +13,7 @@ export interface AuthResponse {
   user: User;
 }
 
-export interface TeenProfile {
+export interface UserProfile {
   id: number;
   userId: number;
   ageRange: string | null;
@@ -21,8 +21,10 @@ export interface TeenProfile {
   sports: Sport[];
   weeklyAvailability: WeeklyAvailability | null;
   healthConnected: boolean;
-  linkedParentId: number | null;
 }
+
+// Alias for compatibility
+export type TeenProfile = UserProfile;
 
 export interface Goal {
   id: string;
@@ -50,29 +52,6 @@ export interface TimeBlock {
   start: string;
   end: string;
   activity?: string;
-}
-
-export interface ParentProfile {
-  id: number;
-  userId: number;
-  inviteCode: string | null;
-}
-
-export interface ParentTeenLink {
-  id: number;
-  parentId: number;
-  teenId: number;
-  status: 'pending' | 'active' | 'revoked';
-  supervisionLevel: 'light' | 'moderate' | 'full';
-}
-
-export interface ParentGuardrails {
-  id: number;
-  parentId: number;
-  teenId: number;
-  maxWeeklyTrainingMinutes: number | null;
-  minNightlySleepHours: number | null;
-  noWeightLossMode: boolean;
 }
 
 export interface DailyCheckin {
@@ -158,7 +137,7 @@ export interface SleepGuidance {
 }
 
 export interface EscalationFlag {
-  type: 'consult_professional' | 'parent_notification' | 'urgent_concern';
+  type: 'consult_professional' | 'urgent_concern';
   reason: string;
   urgency: 'immediate' | 'soon' | 'routine';
 }

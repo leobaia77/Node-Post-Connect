@@ -53,7 +53,7 @@ export function useAuth() {
     email: string, 
     password: string, 
     displayName: string, 
-    role: 'teen' | 'parent'
+    role: 'user' | 'admin' = 'user'
   ): Promise<void> => {
     try {
       setError(null);
@@ -81,11 +81,7 @@ export function useAuth() {
 
   const redirectAfterAuth = (authUser: User) => {
     if (!authUser.onboardingComplete) {
-      if (authUser.role === 'teen') {
-        router.replace('/(teen-onboarding)/age-range');
-      } else if (authUser.role === 'parent') {
-        router.replace('/(parent-onboarding)/generate-code');
-      }
+      router.replace('/(onboarding)/age-range');
     } else {
       router.replace('/(tabs)');
     }

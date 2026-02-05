@@ -27,7 +27,7 @@ export default function AgeRangeScreen() {
     
     try {
       await updateProfile.mutateAsync({ ageRange: selected } as never);
-      router.push('/(teen-onboarding)/goals');
+      router.push('/(onboarding)/goals');
     } catch {
     }
   };

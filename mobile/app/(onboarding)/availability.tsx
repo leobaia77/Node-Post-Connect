@@ -51,7 +51,7 @@ export default function AvailabilityScreen() {
   const handleContinue = async () => {
     try {
       await updateProfile.mutateAsync({ weeklyAvailability: availability } as never);
-      router.push('/(teen-onboarding)/connect-health');
+      router.push('/(onboarding)/connect-health');
     } catch {
     }
   };

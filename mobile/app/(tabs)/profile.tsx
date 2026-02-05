@@ -46,7 +46,7 @@ export default function ProfileScreen() {
           <Text style={styles.email}>{user?.email || ''}</Text>
           <View style={styles.badge}>
             <Text style={styles.badgeText}>
-              {user?.role === 'teen' ? 'Teen Athlete' : 'Parent'}
+              {user?.role === 'admin' ? 'Administrator' : 'Athlete'}
             </Text>
           </View>
         </View>

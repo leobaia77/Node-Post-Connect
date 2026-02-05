@@ -1,15 +1,12 @@
 import { db } from "./db";
 import { eq, and, gte, lte, desc, isNull } from "drizzle-orm";
 import {
-  users, profiles, teenProfiles, parentTeenLinks, parentGuardrails,
-  teenSharingPreferences, dailyCheckins, sleepLogs, workoutLogs,
+  users, profiles, teenProfiles, dailyCheckins, sleepLogs, workoutLogs,
   nutritionLogs, ptRoutines, ptAdherenceLogs, ptExercises, ptRoutineExercises,
   braceSchedules, braceWearingLogs, symptomLogs, morningBriefs,
   recommendations, safetyAlerts,
   type User, type InsertUser, type Profile, type InsertProfile,
-  type TeenProfile, type InsertTeenProfile, type ParentTeenLink, type InsertParentTeenLink,
-  type ParentGuardrails, type InsertParentGuardrails, type TeenSharingPreferences,
-  type InsertTeenSharingPreferences, type DailyCheckin, type InsertDailyCheckin,
+  type TeenProfile, type InsertTeenProfile, type DailyCheckin, type InsertDailyCheckin,
   type SleepLog, type InsertSleepLog, type WorkoutLog, type InsertWorkoutLog,
   type NutritionLog, type InsertNutritionLog, type PtRoutine, type InsertPtRoutine,
   type PtAdherenceLog, type InsertPtAdherenceLog, type PtExercise, type InsertPtExercise,
@@ -39,22 +36,6 @@ export interface IStorage {
   createTeenProfile(data: InsertTeenProfile): Promise<TeenProfile>;
   updateTeenProfile(profileId: string, data: Partial<TeenProfile>): Promise<TeenProfile | undefined>;
 
-  // Parent-Teen Links
-  createLink(data: InsertParentTeenLink): Promise<ParentTeenLink>;
-  getLinkByCode(code: string): Promise<ParentTeenLink | undefined>;
-  getLinksByParent(parentUserId: string): Promise<ParentTeenLink[]>;
-  getLinksByTeen(teenUserId: string): Promise<ParentTeenLink[]>;
-  updateLink(id: string, data: Partial<ParentTeenLink>): Promise<ParentTeenLink | undefined>;
-
-  // Parent Guardrails
-  getGuardrails(linkId: string): Promise<ParentGuardrails | undefined>;
-  createGuardrails(data: InsertParentGuardrails): Promise<ParentGuardrails>;
-  updateGuardrails(linkId: string, data: Partial<ParentGuardrails>): Promise<ParentGuardrails | undefined>;
-
-  // Teen Sharing Preferences
-  getSharingPreferences(teenProfileId: string): Promise<TeenSharingPreferences | undefined>;
-  createSharingPreferences(data: InsertTeenSharingPreferences): Promise<TeenSharingPreferences>;
-  updateSharingPreferences(teenProfileId: string, data: Partial<TeenSharingPreferences>): Promise<TeenSharingPreferences | undefined>;
 
   // Daily Check-ins
   getCheckins(teenProfileId: string, startDate: string, endDate: string): Promise<DailyCheckin[]>;
@@ -118,10 +99,9 @@ export interface IStorage {
   // Safety Alerts
   getSafetyAlerts(teenProfileId: string): Promise<SafetyAlert[]>;
   getUnacknowledgedAlerts(teenProfileId: string): Promise<SafetyAlert[]>;
-  getParentVisibleAlerts(teenProfileId: string): Promise<SafetyAlert[]>;
   getAlertById(id: string): Promise<SafetyAlert | undefined>;
   createSafetyAlert(data: InsertSafetyAlert): Promise<SafetyAlert>;
-  acknowledgeAlert(id: string, byTeen: boolean, byParent: boolean): Promise<SafetyAlert | undefined>;
+  acknowledgeAlert(id: string): Promise<SafetyAlert | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -179,64 +159,6 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  // Parent-Teen Links
-  async createLink(data: InsertParentTeenLink): Promise<ParentTeenLink> {
-    const result = await db.insert(parentTeenLinks).values(data).returning();
-    return result[0];
-  }
-
-  async getLinkByCode(code: string): Promise<ParentTeenLink | undefined> {
-    const result = await db.select().from(parentTeenLinks).where(eq(parentTeenLinks.inviteCode, code)).limit(1);
-    return result[0];
-  }
-
-  async getLinksByParent(parentUserId: string): Promise<ParentTeenLink[]> {
-    return db.select().from(parentTeenLinks).where(eq(parentTeenLinks.parentUserId, parentUserId));
-  }
-
-  async getLinksByTeen(teenUserId: string): Promise<ParentTeenLink[]> {
-    return db.select().from(parentTeenLinks).where(eq(parentTeenLinks.teenUserId, teenUserId));
-  }
-
-  async updateLink(id: string, data: Partial<ParentTeenLink>): Promise<ParentTeenLink | undefined> {
-    const result = await db.update(parentTeenLinks).set(data).where(eq(parentTeenLinks.id, id)).returning();
-    return result[0];
-  }
-
-  // Parent Guardrails
-  async getGuardrails(linkId: string): Promise<ParentGuardrails | undefined> {
-    const result = await db.select().from(parentGuardrails).where(eq(parentGuardrails.linkId, linkId)).limit(1);
-    return result[0];
-  }
-
-  async createGuardrails(data: InsertParentGuardrails): Promise<ParentGuardrails> {
-    const result = await db.insert(parentGuardrails).values(data).returning();
-    return result[0];
-  }
-
-  async updateGuardrails(linkId: string, data: Partial<ParentGuardrails>): Promise<ParentGuardrails | undefined> {
-    const result = await db.update(parentGuardrails).set({
-      ...data,
-      updatedAt: new Date(),
-    }).where(eq(parentGuardrails.linkId, linkId)).returning();
-    return result[0];
-  }
-
-  // Teen Sharing Preferences
-  async getSharingPreferences(teenProfileId: string): Promise<TeenSharingPreferences | undefined> {
-    const result = await db.select().from(teenSharingPreferences).where(eq(teenSharingPreferences.teenProfileId, teenProfileId)).limit(1);
-    return result[0];
-  }
-
-  async createSharingPreferences(data: InsertTeenSharingPreferences): Promise<TeenSharingPreferences> {
-    const result = await db.insert(teenSharingPreferences).values(data).returning();
-    return result[0];
-  }
-
-  async updateSharingPreferences(teenProfileId: string, data: Partial<TeenSharingPreferences>): Promise<TeenSharingPreferences | undefined> {
-    const result = await db.update(teenSharingPreferences).set(data).where(eq(teenSharingPreferences.teenProfileId, teenProfileId)).returning();
-    return result[0];
-  }
 
   // Daily Check-ins
   async getCheckins(teenProfileId: string, startDate: string, endDate: string): Promise<DailyCheckin[]> {
@@ -370,7 +292,7 @@ export class DatabaseStorage implements IStorage {
     return db.select().from(safetyAlerts)
       .where(and(
         eq(safetyAlerts.teenProfileId, teenProfileId),
-        eq(safetyAlerts.acknowledgedByTeen, false)
+        eq(safetyAlerts.acknowledged, false)
       ))
       .orderBy(desc(safetyAlerts.createdAt));
   }
@@ -380,15 +302,6 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async getParentVisibleAlerts(teenProfileId: string): Promise<SafetyAlert[]> {
-    return db.select().from(safetyAlerts)
-      .where(and(
-        eq(safetyAlerts.teenProfileId, teenProfileId),
-        eq(safetyAlerts.shareWithParent, true)
-      ))
-      .orderBy(desc(safetyAlerts.createdAt));
-  }
-
   async getAlertById(id: string): Promise<SafetyAlert | undefined> {
     const result = await db.select().from(safetyAlerts)
       .where(eq(safetyAlerts.id, id))
@@ -396,11 +309,8 @@ export class DatabaseStorage implements IStorage {
     return result[0];
   }
 
-  async acknowledgeAlert(id: string, byTeen: boolean, byParent: boolean): Promise<SafetyAlert | undefined> {
-    const updates: Partial<SafetyAlert> = {};
-    if (byTeen) updates.acknowledgedByTeen = true;
-    if (byParent) updates.acknowledgedByParent = true;
-    const result = await db.update(safetyAlerts).set(updates).where(eq(safetyAlerts.id, id)).returning();
+  async acknowledgeAlert(id: string): Promise<SafetyAlert | undefined> {
+    const result = await db.update(safetyAlerts).set({ acknowledged: true }).where(eq(safetyAlerts.id, id)).returning();
     return result[0];
   }
 

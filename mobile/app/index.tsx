@@ -26,11 +26,7 @@ export default function Index() {
       const user = response.user;
 
       if (!user.onboardingComplete) {
-        if (user.role === 'teen') {
-          router.replace('/(teen-onboarding)/age-range');
-        } else if (user.role === 'parent') {
-          router.replace('/(parent-onboarding)/generate-code');
-        }
+        router.replace('/(onboarding)/age-range');
       } else {
         router.replace('/(tabs)');
       }
