@@ -19,8 +19,6 @@ import {
   sleepLogs, 
   workoutLogs, 
   nutritionLogs,
-  parentGuardrails,
-  parentTeenLinks,
   teenProfiles,
   profiles,
   type SafetyAlert
@@ -60,16 +58,7 @@ async function checkRecentAlert(
 }
 
 async function getMinSleepTarget(teenProfileId: string): Promise<number> {
-  const link = await db
-    .select({ minSleep: parentGuardrails.minNightlySleepHours })
-    .from(parentTeenLinks)
-    .innerJoin(teenProfiles, eq(teenProfiles.id, teenProfileId))
-    .innerJoin(parentGuardrails, eq(parentGuardrails.linkId, parentTeenLinks.id))
-    .limit(1);
-  
-  if (link.length > 0 && link[0].minSleep) {
-    return parseFloat(link[0].minSleep);
-  }
+  // Default minimum sleep target (previously from parent guardrails, now a fixed default)
   return 8.0;
 }
 

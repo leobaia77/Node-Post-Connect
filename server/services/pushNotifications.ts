@@ -1,6 +1,6 @@
 import { db } from "../db";
 import { eq } from "drizzle-orm";
-import { profiles, teenProfiles, parentTeenLinks, users } from "@shared/schema";
+import { profiles, teenProfiles } from "@shared/schema";
 import type { SafetyAlert } from "@shared/schema";
 
 export interface PushNotificationPayload {
@@ -98,54 +98,11 @@ export async function notifyTeenOfAlert(
   }
 }
 
-export async function notifyParentOfAlert(
-  teenProfileId: string,
-  alert: SafetyAlert
-): Promise<void> {
-  if (!alert.shareWithParent) return;
-
-  try {
-    const teenProfileData = await db
-      .select({ userId: profiles.userId })
-      .from(teenProfiles)
-      .innerJoin(profiles, eq(profiles.id, teenProfiles.profileId))
-      .where(eq(teenProfiles.id, teenProfileId))
-      .limit(1);
-
-    if (teenProfileData.length === 0) return;
-
-    const teenUserId = teenProfileData[0].userId;
-
-    const links = await db
-      .select({ 
-        parentUserId: parentTeenLinks.parentUserId,
-      })
-      .from(parentTeenLinks)
-      .where(eq(parentTeenLinks.teenUserId, teenUserId));
-
-    for (const link of links) {
-      if (!link.parentUserId) continue;
-
-      await sendPushNotification(
-        { userId: link.parentUserId },
-        {
-          title: "Teen Health Alert",
-          body: `New ${alert.severity} alert for your teen's health`,
-          data: { alertId: alert.id, alertType: alert.alertType },
-        }
-      );
-    }
-  } catch (error) {
-    console.error("[Push] Error notifying parent:", error);
-  }
-}
-
 export async function notifyOfNewAlerts(
   teenProfileId: string,
   alerts: SafetyAlert[]
 ): Promise<void> {
   for (const alert of alerts) {
     await notifyTeenOfAlert(teenProfileId, alert);
-    await notifyParentOfAlert(teenProfileId, alert);
   }
 }
