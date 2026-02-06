@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GrowthTrack User Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #F8FAFC;
+    color: #1F2937;
+    line-height: 1.6;
+  }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 40px 24px; }
+  
+  /* Header */
+  .hero {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #E8F5F0, #D1FAE5, #A7F3D0);
+    border-radius: 24px;
+    margin-bottom: 48px;
+  }
+  .hero-icon { font-size: 64px; margin-bottom: 16px; }
+  .hero h1 { font-size: 36px; font-weight: 800; color: #065F46; margin-bottom: 8px; }
+  .hero p { font-size: 18px; color: #047857; max-width: 500px; margin: 0 auto; }
+  
+  /* Section */
+  .section {
+    margin-bottom: 56px;
+    page-break-inside: avoid;
+  }
+  .section-number {
+    display: inline-block;
+    background: #10B981;
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 36px;
+    font-weight: 700;
+    font-size: 16px;
+    margin-right: 12px;
+    vertical-align: middle;
+  }
+  .section h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1F2937;
+    margin-bottom: 16px;
+    display: inline;
+    vertical-align: middle;
+  }
+  .section-desc {
+    font-size: 15px;
+    color: #4B5563;
+    margin-bottom: 24px;
+    margin-top: 8px;
+  }
+  
+  /* Phone Frame */
+  .phone-row {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin: 24px 0;
+  }
+  .phone-wrapper {
+    text-align: center;
+  }
+  .phone-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #64748B;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .phone {
+    width: 280px;
+    min-height: 500px;
+    background: #FFFFFF;
+    border-radius: 36px;
+    border: 3px solid #1F2937;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+    position: relative;
+  }
+  .phone::before {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 6px;
+    background: #1F2937;
+    border-radius: 3px;
+    margin: 12px auto 0;
+  }
+  .phone-screen {
+    padding: 8px 16px 20px;
+  }
+  
+  /* Screen Components */
+  .screen-status { 
+    display: flex; justify-content: space-between; 
+    font-size: 11px; color: #64748B; padding: 4px 4px 8px;
+    font-weight: 600;
+  }
+  .screen-header { 
+    text-align: center; margin-bottom: 16px; padding: 8px 0;
+  }
+  .screen-header h3 { font-size: 17px; font-weight: 600; color: #1F2937; }
+  
+  .screen-card {
+    background: #FFFFFF;
+    border: 1px solid #E8F5F0;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .screen-card.green { background: #E8F5F0; border-color: #A7F3D0; }
+  .screen-card.blue { background: #EFF6FF; border-color: #BFDBFE; }
+  .screen-card.amber { background: #FFFBEB; border-color: #FDE68A; }
+  
+  .screen-input {
+    border: 1.5px solid #E2E8F0;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: #94A3B8;
+    background: #FFFFFF;
+  }
+  .screen-input.filled { color: #1F2937; border-color: #10B981; }
+  .screen-input-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 4px;
+  }
+  
+  .screen-btn {
+    background: #10B981;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 12px;
+    width: 100%;
+    text-align: center;
+    font-weight: 600;
+    font-size: 14px;
+    margin-top: 8px;
+  }
+  .screen-btn.outline {
+    background: transparent;
+    border: 2px solid #10B981;
+    color: #10B981;
+  }
+  .screen-btn.red { background: #FEF2F2; color: #EF4444; border: 1px solid #FECACA; }
+  .screen-btn.gray { background: #F1F5F9; color: #64748B; }
+  
+  .screen-link { color: #10B981; font-size: 13px; font-weight: 600; text-decoration: none; }
+  
+  .screen-logo {
+    width: 56px; height: 56px; background: #E8F5F0; border-radius: 16px;
+    margin: 12px auto; display: flex; align-items: center; justify-content: center;
+    font-size: 28px;
+  }
+  
+  .screen-tabs {
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid #E8F5F0;
+    padding: 8px 0 4px;
+    margin-top: 12px;
+    background: white;
+  }
+  .screen-tab {
+    text-align: center;
+    font-size: 9px;
+    color: #64748B;
+    font-weight: 500;
+  }
+  .screen-tab.active { color: #10B981; }
+  .screen-tab-icon { font-size: 18px; display: block; margin-bottom: 2px; }
+  
+  .screen-greeting { font-size: 15px; color: #64748B; }
+  .screen-name { font-size: 20px; font-weight: 700; color: #1F2937; }
+  .screen-date { font-size: 12px; color: #94A3B8; margin-top: 2px; }
+  
+  .quick-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+  .quick-action {
+    flex: 1;
+    background: #E8F5F0;
+    border-radius: 12px;
+    padding: 10px 8px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    color: #065F46;
+  }
+  .quick-action-icon { font-size: 20px; display: block; margin-bottom: 4px; }
+  
+  .progress-bar-bg {
+    height: 6px; background: #E2E8F0; border-radius: 3px; margin: 4px 0 12px;
+  }
+  .progress-bar-fill {
+    height: 100%; background: #10B981; border-radius: 3px;
+  }
+  
+  .option-card {
+    border: 2px solid #E2E8F0;
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .option-card.selected { border-color: #10B981; background: #F0FDF9; }
+  .option-icon { font-size: 20px; }
+  .option-text { font-size: 13px; font-weight: 500; color: #374151; }
+  
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #F1F5F9;
+    font-size: 13px;
+  }
+  .setting-row:last-child { border-bottom: none; }
+  .setting-icon { font-size: 18px; margin-right: 10px; }
+  .setting-label { flex: 1; font-weight: 500; color: #374151; }
+  .setting-arrow { color: #94A3B8; font-size: 14px; }
+  
+  .toggle {
+    width: 36px; height: 20px; background: #86EFAC; border-radius: 10px;
+    position: relative;
+  }
+  .toggle::after {
+    content: ''; position: absolute; top: 2px; right: 2px;
+    width: 16px; height: 16px; background: white; border-radius: 50%;
+  }
+  .toggle.off { background: #E2E8F0; }
+  .toggle.off::after { left: 2px; right: auto; }
+  
+  .timer-display {
+    text-align: center; font-size: 36px; font-weight: 700; 
+    font-variant-numeric: tabular-nums; letter-spacing: 2px;
+    color: #10B981; margin: 16px 0;
+  }
+  
+  .chart-placeholder {
+    height: 120px;
+    background: linear-gradient(180deg, #E8F5F0 0%, #F8FAFC 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    padding: 0 12px 12px;
+  }
+  .chart-bar {
+    width: 24px;
+    background: #10B981;
+    border-radius: 4px 4px 0 0;
+    opacity: 0.7;
+  }
+  
+  .callout-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin: 16px 0;
+    padding: 16px;
+    background: #F0FDF9;
+    border-radius: 12px;
+    border-left: 4px solid #10B981;
+  }
+  .callout-icon { font-size: 20px; flex-shrink: 0; }
+  .callout-text { font-size: 14px; color: #374151; line-height: 1.5; }
+  .callout-text strong { color: #065F46; }
+  
+  .steps-list {
+    counter-reset: step;
+    list-style: none;
+    padding: 0;
+  }
+  .steps-list li {
+    counter-increment: step;
+    padding: 12px 0 12px 48px;
+    position: relative;
+    font-size: 15px;
+    color: #374151;
+    border-bottom: 1px solid #F1F5F9;
+  }
+  .steps-list li:last-child { border-bottom: none; }
+  .steps-list li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 12px;
+    width: 32px;
+    height: 32px;
+    background: #E8F5F0;
+    color: #10B981;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 32px;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  
+  .two-col { display: flex; gap: 24px; flex-wrap: wrap; }
+  .two-col > * { flex: 1; min-width: 300px; }
+  
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    vertical-align: middle;
+  }
+  .badge.green { background: #D1FAE5; color: #065F46; }
+  .badge.blue { background: #DBEAFE; color: #1E40AF; }
+  .badge.amber { background: #FEF3C7; color: #92400E; }
+  
+  .footer {
+    text-align: center;
+    padding: 40px 20px;
+    color: #94A3B8;
+    font-size: 13px;
+    border-top: 1px solid #E2E8F0;
+    margin-top: 40px;
+  }
+
+  @media print {
+    .phone { box-shadow: none; border: 2px solid #ccc; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<!-- ===================== HERO ===================== -->
+<div class="hero">
+  <div class="hero-icon">💚</div>
+  <h1>GrowthTrack</h1>
+  <p>Teen Physical Development Optimization App — User Guide</p>
+</div>
+
+<!-- ===================== 1. GETTING STARTED ===================== -->
+<div class="section">
+  <span class="section-number">1</span>
+  <h2>Getting Started</h2>
+  <p class="section-desc">Create your account and set up your health profile in under 2 minutes.</p>
+  
+  <div class="phone-row">
+    <!-- LOGIN -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Login</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-logo">💚</div>
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:22px; font-weight:700;">Welcome Back</div>
+            <div style="font-size:13px; color:#64748B;">Sign in to continue tracking your health</div>
+          </div>
+          <div class="screen-card">
+            <div class="screen-input-label">Email</div>
+            <div class="screen-input filled">alex@example.com</div>
+            <div class="screen-input-label">Password</div>
+            <div class="screen-input filled">••••••••   👁</div>
+            <div class="screen-btn">Sign In</div>
+          </div>
+          <div style="text-align:center; margin-top:12px;">
+            <span style="color:#64748B; font-size:13px;">Don't have an account? </span>
+            <span class="screen-link">Create one</span>
+          </div>
+          <div style="text-align:center; margin-top:8px;">
+            <span class="screen-link">Forgot password?</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REGISTER -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Create Account</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-logo">💚</div>
+          <div style="text-align:center; margin-bottom:12px;">
+            <div style="font-size:22px; font-weight:700;">Create Account</div>
+            <div style="font-size:13px; color:#64748B;">Start your health journey today</div>
+          </div>
+          <div class="screen-card">
+            <div class="screen-input-label">Display Name</div>
+            <div class="screen-input">Your name</div>
+            <div class="screen-input-label">Email</div>
+            <div class="screen-input">you@example.com</div>
+            <div class="screen-input-label">Password</div>
+            <div class="screen-input">Min 8 characters   👁</div>
+            <div class="screen-input-label">Security Word</div>
+            <div class="screen-input">A secret word for recovery</div>
+            <div style="font-size:11px; color:#64748B; font-style:italic; margin-bottom:8px;">
+              Remember this word — you'll need it to recover your account.
+            </div>
+            <div class="screen-btn">Create Account</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- FORGOT PASSWORD -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Password Recovery</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div style="margin-top:12px;">
+            <span style="font-size:18px; color:#64748B;">← </span>
+          </div>
+          <div style="text-align:center; margin: 20px 0 16px;">
+            <div style="font-size:22px; font-weight:700;">Reset Password</div>
+            <div style="font-size:13px; color:#64748B;">Enter your email and security word</div>
+          </div>
+          <div class="screen-card">
+            <div class="screen-input-label">Email</div>
+            <div class="screen-input">you@example.com</div>
+            <div class="screen-input-label">Security Word</div>
+            <div class="screen-input">Enter your secret word</div>
+            <div class="screen-btn">Verify Identity</div>
+          </div>
+          <div class="screen-card green" style="margin-top:16px;">
+            <div style="font-size:12px; font-weight:600; color:#065F46;">✅ Step 2: Set New Password</div>
+            <div style="font-size:11px; color:#047857; margin-top:4px;">
+              Once verified, you'll be asked to create a new password (min 8 characters).
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-row">
+    <span class="callout-icon">🔑</span>
+    <div class="callout-text">
+      <strong>Important:</strong> Your <strong>Security Word</strong> is the only way to recover your account if you forget your password. Write it down somewhere safe! There is no email-based password reset.
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 2. ONBOARDING ===================== -->
+<div class="section">
+  <span class="section-number">2</span>
+  <h2>Onboarding Setup</h2>
+  <p class="section-desc">After creating your account, you'll complete a quick 6-step setup to personalize your experience.</p>
+  
+  <div class="phone-row">
+    <!-- AGE RANGE -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Step 1: Age Range</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:17%"></div></div>
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:19px; font-weight:700;">What's your age range?</div>
+            <div style="font-size:13px; color:#64748B;">Helps us personalize your experience</div>
+          </div>
+          <div class="option-card"><span class="option-icon">📗</span><span class="option-text">13–14 years • Early high school</span></div>
+          <div class="option-card selected"><span class="option-icon">📘</span><span class="option-text">15–16 years • Mid high school</span></div>
+          <div class="option-card"><span class="option-icon">📙</span><span class="option-text">17–19 years • Senior / early college</span></div>
+          <div class="screen-btn" style="margin-top:20px;">Continue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- GOALS -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Step 2: Goals</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:33%"></div></div>
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:19px; font-weight:700;">What are your goals?</div>
+            <div style="font-size:13px; color:#64748B;">Select all that apply</div>
+          </div>
+          <div class="option-card selected"><span class="option-icon">🌱</span><span class="option-text">General healthy growth</span></div>
+          <div class="option-card selected"><span class="option-icon">💪</span><span class="option-text">Muscle growth</span></div>
+          <div class="option-card"><span class="option-icon">🦴</span><span class="option-text">Bone health</span></div>
+          <div class="option-card selected"><span class="option-icon">🧍</span><span class="option-text">Scoliosis support</span></div>
+          <div class="option-card"><span class="option-icon">🏆</span><span class="option-text">Athletic performance</span></div>
+          <div class="screen-btn" style="margin-top:12px;">Continue</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SPORTS -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Steps 3-6</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:50%"></div></div>
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="font-size:19px; font-weight:700;">Remaining Steps</div>
+          </div>
+          <div class="screen-card green">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📋 Step 3: Sports & Activities</div>
+            <div style="font-size:12px; color:#4B5563;">Tell us what sports you play and your skill level</div>
+          </div>
+          <div class="screen-card green">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📅 Step 4: Weekly Availability</div>
+            <div style="font-size:12px; color:#4B5563;">Set how many days and hours you can train</div>
+          </div>
+          <div class="screen-card green">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">📱 Step 5: Connect Apple Health</div>
+            <div style="font-size:12px; color:#4B5563;">Optionally sync sleep, workouts, and activity data</div>
+          </div>
+          <div class="screen-card green">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">✅ Step 6: All Done!</div>
+            <div style="font-size:12px; color:#4B5563;">Review your setup and start using the app</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 3. HOME SCREEN ===================== -->
+<div class="section">
+  <span class="section-number">3</span>
+  <h2>Home Dashboard</h2>
+  <p class="section-desc">Your daily hub. See AI-powered recommendations, morning brief, and quick-log actions at a glance.</p>
+
+  <div class="phone-row">
+    <div class="phone-wrapper">
+      <div class="phone-label">Home Screen</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div style="margin-bottom:12px;">
+            <div class="screen-greeting">Good morning,</div>
+            <div class="screen-name">Alex!</div>
+            <div class="screen-date">📅 Thursday, Feb 6</div>
+          </div>
+          
+          <div class="quick-actions">
+            <div class="quick-action"><span class="quick-action-icon">😊</span>Check-in</div>
+            <div class="quick-action"><span class="quick-action-icon">🌙</span>Sleep</div>
+            <div class="quick-action"><span class="quick-action-icon">🏋️</span>Workout</div>
+            <div class="quick-action"><span class="quick-action-icon">🍎</span>Meal</div>
+          </div>
+          
+          <div class="screen-card blue">
+            <div style="font-weight:600; font-size:13px; margin-bottom:6px;">☀️ Morning Brief</div>
+            <div style="font-size:12px; color:#4B5563; line-height:1.5;">
+              You averaged <strong>7.8 hrs</strong> of sleep and <strong>5 hrs</strong> of training this week. Energy is looking good!
+            </div>
+          </div>
+          
+          <div class="screen-card">
+            <div style="font-weight:600; font-size:13px; margin-bottom:8px;">💡 Today's Actions</div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #F1F5F9;">
+              <span style="font-size:16px;">🌙</span>
+              <div><div style="font-size:12px; font-weight:500;">Aim for 8-10 hrs sleep tonight</div><div style="font-size:10px; color:#94A3B8;">Before bed</div></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid #F1F5F9;">
+              <span style="font-size:16px;">💧</span>
+              <div><div style="font-size:12px; font-weight:500;">Stay hydrated throughout the day</div><div style="font-size:10px; color:#94A3B8;">All day</div></div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px; padding:6px 0;">
+              <span style="font-size:16px;">🤸</span>
+              <div><div style="font-size:12px; font-weight:500;">5-10 min stretching</div><div style="font-size:10px; color:#94A3B8;">Post-workout</div></div>
+            </div>
+          </div>
+          
+          <div class="screen-tabs">
+            <div class="screen-tab active"><span class="screen-tab-icon">🏠</span>Home</div>
+            <div class="screen-tab"><span class="screen-tab-icon">🩺</span>Care</div>
+            <div class="screen-tab"><span class="screen-tab-icon">➕</span>Log</div>
+            <div class="screen-tab"><span class="screen-tab-icon">📊</span>Insights</div>
+            <div class="screen-tab"><span class="screen-tab-icon">⚙️</span>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:280px; padding-top:40px;">
+      <h3 style="font-size:18px; font-weight:700; margin-bottom:16px;">What you'll see here:</h3>
+      <ul class="steps-list">
+        <li><strong>Quick Actions</strong> — Tap to immediately log a check-in, sleep, workout, or meal</li>
+        <li><strong>Morning Brief</strong> — AI-generated daily summary of your weekly sleep, training, and energy trends</li>
+        <li><strong>Today's Actions</strong> — Personalized recommendations based on your data. As you log more, these become more specific</li>
+        <li><strong>Pull to Refresh</strong> — Swipe down anywhere to reload the latest data and recommendations</li>
+      </ul>
+      <div class="callout-row">
+        <span class="callout-icon">💡</span>
+        <div class="callout-text">
+          <strong>Tip:</strong> Log data consistently for 3-5 days and the AI recommendations will shift from generic advice to personalized, evidence-based guidance.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 4. DAILY LOGGING ===================== -->
+<div class="section">
+  <span class="section-number">4</span>
+  <h2>Daily Logging</h2>
+  <p class="section-desc">Track your health data daily through the Log tab or Home quick actions.</p>
+
+  <div class="phone-row">
+    <!-- CHECK-IN -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Daily Check-in</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-header"><h3>Daily Check-in</h3></div>
+          <div class="screen-card">
+            <div style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;">How's your energy? (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#10B981;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#10B981;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#10B981;border-radius:4px;"></span>
+            </div>
+            <div style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;">Mood (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#3B82F6;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#3B82F6;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+            </div>
+            <div style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;">Soreness (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#F59E0B;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#F59E0B;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+            </div>
+            <div style="font-size:12px; font-weight:600; color:#374151; margin-bottom:8px;">Stress Level (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#EF4444;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+            </div>
+            <div class="screen-input-label">Pain notes (optional)</div>
+            <div class="screen-input">Describe any pain or discomfort...</div>
+            <div class="screen-btn">Save Check-in</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLEEP -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Sleep Log</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-header"><h3>Log Sleep</h3></div>
+          <div class="screen-card">
+            <div class="screen-input-label">Bedtime</div>
+            <div class="screen-input filled">10:30 PM</div>
+            <div class="screen-input-label">Wake Time</div>
+            <div class="screen-input filled">6:45 AM</div>
+            <div class="screen-input-label">Total Hours</div>
+            <div class="screen-input filled">8.25</div>
+            <div class="screen-input-label">Sleep Quality (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#8B5CF6;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#8B5CF6;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+            </div>
+            <div class="screen-input-label">Night Wakeups</div>
+            <div class="screen-input filled">1</div>
+            <div class="screen-btn">Save Sleep Log</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- WORKOUT -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Workout Log</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-header"><h3>Log Workout</h3></div>
+          <div class="screen-card">
+            <div class="screen-input-label">Workout Type</div>
+            <div class="screen-input filled">🏃 Sport Practice ▾</div>
+            <div class="screen-input-label">Sport Name</div>
+            <div class="screen-input filled">Soccer</div>
+            <div class="screen-input-label">Duration (minutes)</div>
+            <div class="screen-input filled">75</div>
+            <div class="screen-input-label">RPE — Rate of Perceived Exertion (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#EF4444;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+            </div>
+            <div class="screen-input-label">Notes (optional)</div>
+            <div class="screen-input">Great session, felt strong</div>
+            <div class="screen-btn">Save Workout</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 5. INSIGHTS ===================== -->
+<div class="section">
+  <span class="section-number">5</span>
+  <h2>Insights & Trends</h2>
+  <p class="section-desc">View charts and patterns from your logged data in the Insights tab.</p>
+
+  <div class="phone-row">
+    <div class="phone-wrapper">
+      <div class="phone-label">Insights Tab</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-header"><h3>Insights</h3></div>
+          <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <div style="flex:1; padding:6px; background:#10B981; color:white; text-align:center; border-radius:8px; font-size:12px; font-weight:600;">Sleep</div>
+            <div style="flex:1; padding:6px; background:#F1F5F9; text-align:center; border-radius:8px; font-size:12px; font-weight:500; color:#64748B;">Training</div>
+            <div style="flex:1; padding:6px; background:#F1F5F9; text-align:center; border-radius:8px; font-size:12px; font-weight:500; color:#64748B;">Mood</div>
+          </div>
+          <div class="screen-card">
+            <div style="font-size:12px; font-weight:600; margin-bottom:6px;">🌙 Sleep Trends — Last 7 Days</div>
+            <div class="chart-placeholder">
+              <div class="chart-bar" style="height:65%"></div>
+              <div class="chart-bar" style="height:80%"></div>
+              <div class="chart-bar" style="height:55%"></div>
+              <div class="chart-bar" style="height:70%"></div>
+              <div class="chart-bar" style="height:85%"></div>
+              <div class="chart-bar" style="height:60%"></div>
+              <div class="chart-bar" style="height:75%"></div>
+            </div>
+            <div style="display:flex; justify-content:space-between; font-size:10px; color:#94A3B8; padding:4px 12px 0;">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+            </div>
+          </div>
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <div class="screen-card" style="flex:1; text-align:center;">
+              <div style="font-size:10px; color:#64748B;">Avg Sleep</div>
+              <div style="font-size:20px; font-weight:700; color:#10B981;">7.8h</div>
+            </div>
+            <div class="screen-card" style="flex:1; text-align:center;">
+              <div style="font-size:10px; color:#64748B;">Best Night</div>
+              <div style="font-size:20px; font-weight:700; color:#3B82F6;">9.1h</div>
+            </div>
+          </div>
+          <div class="screen-tabs">
+            <div class="screen-tab"><span class="screen-tab-icon">🏠</span>Home</div>
+            <div class="screen-tab"><span class="screen-tab-icon">🩺</span>Care</div>
+            <div class="screen-tab"><span class="screen-tab-icon">➕</span>Log</div>
+            <div class="screen-tab active"><span class="screen-tab-icon">📊</span>Insights</div>
+            <div class="screen-tab"><span class="screen-tab-icon">⚙️</span>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="flex:1; min-width:280px; padding-top:40px;">
+      <h3 style="font-size:18px; font-weight:700; margin-bottom:16px;">Available Charts:</h3>
+      <div class="screen-card" style="margin-bottom:12px;">
+        <div style="font-weight:600; font-size:14px;">🌙 Sleep Trends</div>
+        <div style="font-size:13px; color:#64748B;">Hours per night, quality rating, recommended 8hr target line</div>
+      </div>
+      <div class="screen-card" style="margin-bottom:12px;">
+        <div style="font-weight:600; font-size:14px;">🏋️ Training Load</div>
+        <div style="font-size:13px; color:#64748B;">Workout minutes by type, RPE tracking, weekly volume</div>
+      </div>
+      <div class="screen-card" style="margin-bottom:12px;">
+        <div style="font-weight:600; font-size:14px;">😊 Mood & Wellbeing</div>
+        <div style="font-size:13px; color:#64748B;">Mood, energy, stress, and soreness levels over time</div>
+      </div>
+      <div class="callout-row">
+        <span class="callout-icon">📊</span>
+        <div class="callout-text">Charts update automatically as you log data. Tap on any chart category tab to switch between Sleep, Training, and Mood views.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 6. SCOLIOSIS CARE ===================== -->
+<div class="section">
+  <span class="section-number">6</span>
+  <h2>Scoliosis Care</h2>
+  <p class="section-desc">If you selected "Scoliosis support" as a goal, the Care tab gives you specialized tools.</p>
+
+  <div class="phone-row">
+    <!-- SCOLIOSIS DASHBOARD -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Care Dashboard</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-header"><h3>🩺 My Care</h3></div>
+          <div style="display:flex; gap:10px; margin-bottom:12px;">
+            <div class="screen-card" style="flex:1; text-align:center;">
+              <div style="font-size:10px; color:#64748B;">Brace Today</div>
+              <div style="font-size:24px; font-weight:700; color:#10B981;">12.5h</div>
+              <div style="font-size:10px; color:#94A3B8;">/ 16h target</div>
+            </div>
+            <div class="screen-card" style="flex:1; text-align:center;">
+              <div style="font-size:10px; color:#64748B;">PT This Week</div>
+              <div style="font-size:24px; font-weight:700; color:#3B82F6;">4</div>
+              <div style="font-size:10px; color:#94A3B8;">/ 5 sessions</div>
+            </div>
+          </div>
+          <div class="quick-actions">
+            <div class="quick-action" style="background:#E8F5F0;"><span class="quick-action-icon">⏱</span>Brace Timer</div>
+            <div class="quick-action" style="background:#EFF6FF;"><span class="quick-action-icon">🤸</span>PT Routine</div>
+          </div>
+          <div class="quick-actions">
+            <div class="quick-action" style="background:#FFFBEB;"><span class="quick-action-icon">📝</span>Symptoms</div>
+            <div class="quick-action" style="background:#F5F3FF;"><span class="quick-action-icon">📚</span>Resources</div>
+          </div>
+          <div class="screen-tabs">
+            <div class="screen-tab"><span class="screen-tab-icon">🏠</span>Home</div>
+            <div class="screen-tab active"><span class="screen-tab-icon">🩺</span>Care</div>
+            <div class="screen-tab"><span class="screen-tab-icon">➕</span>Log</div>
+            <div class="screen-tab"><span class="screen-tab-icon">📊</span>Insights</div>
+            <div class="screen-tab"><span class="screen-tab-icon">⚙️</span>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BRACE TRACKER -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Brace Timer</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div style="margin-top:8px;"><span style="font-size:18px; color:#64748B;">← </span></div>
+          <div class="screen-header"><h3>Brace Tracker</h3></div>
+          <div style="text-align:center; margin:16px 0;">
+            <div style="font-size:11px; color:#64748B; text-transform:uppercase; letter-spacing:1px;">Current Session</div>
+            <div class="timer-display">02:34:17</div>
+            <div class="screen-btn" style="background:#EF4444; max-width:200px; margin:0 auto;">⏹ Stop Wearing</div>
+          </div>
+          <div class="screen-card">
+            <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+              <span style="font-size:12px; font-weight:600;">Today's Progress</span>
+              <span style="font-size:12px; color:#10B981; font-weight:700;">12.5 / 16 hrs</span>
+            </div>
+            <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:78%"></div></div>
+          </div>
+          <div class="screen-card" style="text-align:center;">
+            <div style="font-size:11px; color:#64748B;">Weekly Average</div>
+            <div style="font-size:18px; font-weight:700; color:#10B981;">14.2 hrs/day</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SYMPTOM LOG -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Symptom Log</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div style="margin-top:8px;"><span style="font-size:18px; color:#64748B;">← </span></div>
+          <div class="screen-header"><h3>Log Symptoms</h3></div>
+          <div class="screen-card">
+            <div class="screen-input-label">Curve Discomfort (1-10)</div>
+            <div style="display:flex; gap:4px; margin-bottom:12px;">
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#F59E0B;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#F59E0B;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+              <span style="flex:1;height:8px;background:#E2E8F0;border-radius:4px;"></span>
+            </div>
+            <div class="screen-input-label">Back Pain Location</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+              <span style="padding:4px 10px; border-radius:16px; background:#D1FAE5; font-size:11px; font-weight:500; color:#065F46;">Upper back</span>
+              <span style="padding:4px 10px; border-radius:16px; background:#F1F5F9; font-size:11px; font-weight:500; color:#64748B;">Lower back</span>
+              <span style="padding:4px 10px; border-radius:16px; background:#F1F5F9; font-size:11px; font-weight:500; color:#64748B;">Left side</span>
+              <span style="padding:4px 10px; border-radius:16px; background:#D1FAE5; font-size:11px; font-weight:500; color:#065F46;">Right side</span>
+            </div>
+            <div class="screen-input-label">New Symptoms</div>
+            <div class="screen-input">Describe anything new...</div>
+            <div class="screen-input-label">Red Flags</div>
+            <div style="font-size:11px; color:#EF4444; margin-bottom:8px;">⚠️ Select any that apply:</div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;">
+              <span style="padding:4px 10px; border-radius:16px; background:#FEF2F2; font-size:11px; color:#EF4444;">Numbness</span>
+              <span style="padding:4px 10px; border-radius:16px; background:#FEF2F2; font-size:11px; color:#EF4444;">Weakness</span>
+              <span style="padding:4px 10px; border-radius:16px; background:#FEF2F2; font-size:11px; color:#EF4444;">Bladder issues</span>
+            </div>
+            <div class="screen-btn">Save Symptoms</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 7. SETTINGS ===================== -->
+<div class="section">
+  <span class="section-number">7</span>
+  <h2>Settings & Account</h2>
+  <p class="section-desc">Manage your profile, notifications, data privacy, and export your health data.</p>
+
+  <div class="phone-row">
+    <!-- SETTINGS INDEX -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Settings Menu</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div class="screen-header"><h3>Settings</h3></div>
+          <div class="screen-card" style="display:flex; align-items:center; gap:12px; margin-bottom:16px;">
+            <div style="width:44px; height:44px; background:#10B981; border-radius:22px; display:flex; align-items:center; justify-content:center; color:white; font-size:20px; font-weight:700;">A</div>
+            <div style="flex:1;">
+              <div style="font-size:14px; font-weight:600;">Alex Smith</div>
+              <div style="font-size:12px; color:#64748B;">alex@example.com</div>
+            </div>
+            <span style="color:#94A3B8;">›</span>
+          </div>
+          <div style="font-size:11px; font-weight:600; color:#64748B; margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px;">Preferences</div>
+          <div class="screen-card" style="padding:0;">
+            <div class="setting-row" style="padding:12px;"><span class="setting-icon">🎯</span><span class="setting-label">Goals & Priorities</span><span class="setting-arrow">›</span></div>
+            <div class="setting-row" style="padding:12px;"><span class="setting-icon">🔒</span><span class="setting-label">Privacy & Sharing</span><span class="setting-arrow">›</span></div>
+            <div class="setting-row" style="padding:12px;"><span class="setting-icon">🔔</span><span class="setting-label">Notifications</span><span class="setting-arrow">›</span></div>
+          </div>
+          <div style="font-size:11px; font-weight:600; color:#64748B; margin:12px 0 6px; text-transform:uppercase; letter-spacing:0.5px;">Your Data</div>
+          <div class="screen-card" style="padding:0;">
+            <div class="setting-row" style="padding:12px;"><span class="setting-icon">📥</span><span class="setting-label">Export My Data</span><span class="setting-arrow">›</span></div>
+            <div class="setting-row" style="padding:12px;"><span class="setting-icon">👤</span><span class="setting-label">Account Settings</span><span class="setting-arrow">›</span></div>
+          </div>
+          <div class="screen-tabs">
+            <div class="screen-tab"><span class="screen-tab-icon">🏠</span>Home</div>
+            <div class="screen-tab"><span class="screen-tab-icon">🩺</span>Care</div>
+            <div class="screen-tab"><span class="screen-tab-icon">➕</span>Log</div>
+            <div class="screen-tab"><span class="screen-tab-icon">📊</span>Insights</div>
+            <div class="screen-tab active"><span class="screen-tab-icon">⚙️</span>Settings</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DATA EXPORT -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Data Export</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div style="margin-top:8px;"><span style="font-size:18px; color:#64748B;">← </span></div>
+          <div class="screen-header"><h3>Export My Data</h3></div>
+          <div class="screen-card green" style="text-align:center;">
+            <div style="font-size:24px;">📥</div>
+            <div style="font-weight:600; margin-top:6px;">Download Your Data</div>
+            <div style="font-size:12px; color:#4B5563; margin-top:4px;">Export all your health data in a portable format</div>
+          </div>
+          <div style="font-size:12px; font-weight:600; color:#374151; margin:12px 0 6px;">Export Format</div>
+          <div class="option-card selected" style="padding:10px;">
+            <span style="width:18px; height:18px; border:2px solid #10B981; border-radius:50%; display:flex; align-items:center; justify-content:center;"><span style="width:10px; height:10px; background:#10B981; border-radius:50; display:block;"></span></span>
+            <div><div style="font-size:13px; font-weight:600;">JSON</div><div style="font-size:11px; color:#64748B;">Best for importing into other apps</div></div>
+          </div>
+          <div class="option-card" style="padding:10px;">
+            <span style="width:18px; height:18px; border:2px solid #D1D5DB; border-radius:50;"></span>
+            <div><div style="font-size:13px; font-weight:600;">CSV</div><div style="font-size:11px; color:#64748B;">Opens in Excel or Google Sheets</div></div>
+          </div>
+          <div class="screen-btn" style="margin-top:16px;">📥 Export My Data</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ACCOUNT -->
+    <div class="phone-wrapper">
+      <div class="phone-label">Account Settings</div>
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="screen-status"><span>9:41</span><span>📶 🔋</span></div>
+          <div style="margin-top:8px;"><span style="font-size:18px; color:#64748B;">← </span></div>
+          <div class="screen-header"><h3>Account Settings</h3></div>
+          <div style="text-align:center; margin-bottom:16px;">
+            <div style="width:64px; height:64px; background:#10B981; border-radius:32px; margin:0 auto; display:flex; align-items:center; justify-content:center; color:white; font-size:28px; font-weight:700;">A</div>
+          </div>
+          <div class="screen-input-label">Display Name</div>
+          <div class="screen-input filled">Alex Smith</div>
+          <div class="screen-input-label">Email</div>
+          <div class="screen-input filled">alex@example.com</div>
+          <div style="display:flex; justify-content:space-between; padding:10px 0; margin-top:4px;">
+            <span class="screen-link">Change Password →</span>
+          </div>
+          <div style="border-top:1px solid #E8F5F0; padding-top:16px; margin-top:12px;">
+            <div style="font-size:12px; font-weight:600; color:#64748B; margin-bottom:8px;">Account Actions</div>
+            <div class="screen-btn gray" style="margin-bottom:8px; display:flex; align-items:center; justify-content:center; gap:6px;">🚪 Sign Out</div>
+            <div class="screen-btn red" style="display:flex; align-items:center; justify-content:center; gap:6px;">🗑 Delete Account</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout-row">
+    <span class="callout-icon">⚠️</span>
+    <div class="callout-text">
+      <strong>Account Deletion</strong> is permanent. You'll be asked to confirm 3 times and enter your email. All health data is permanently removed within 30 days. This cannot be undone.
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 8. SAFETY SYSTEM ===================== -->
+<div class="section">
+  <span class="section-number">8</span>
+  <h2>Safety Alerts</h2>
+  <p class="section-desc">GrowthTrack automatically monitors your health data for concerning patterns and surfaces alerts.</p>
+
+  <div class="two-col">
+    <div>
+      <h3 style="font-size:18px; font-weight:700; margin-bottom:16px;">What gets flagged:</h3>
+      <div class="screen-card amber" style="margin-bottom:10px;">
+        <div style="font-weight:600; font-size:13px;">🌙 Sleep Deficit</div>
+        <div style="font-size:12px; color:#92400E;">3+ nights below recommended sleep hours</div>
+      </div>
+      <div class="screen-card amber" style="margin-bottom:10px;">
+        <div style="font-weight:600; font-size:13px;">📈 Training Spike</div>
+        <div style="font-size:12px; color:#92400E;">Sudden large increase in weekly training volume</div>
+      </div>
+      <div class="screen-card amber" style="margin-bottom:10px;">
+        <div style="font-weight:600; font-size:13px;">🔴 Pain Flag</div>
+        <div style="font-size:12px; color:#92400E;">Repeated pain reports in daily check-ins</div>
+      </div>
+      <div class="screen-card amber" style="margin-bottom:10px;">
+        <div style="font-weight:600; font-size:13px;">⚡ Low Energy</div>
+        <div style="font-size:12px; color:#92400E;">Sustained low energy levels across multiple days</div>
+      </div>
+      <div class="screen-card amber" style="margin-bottom:10px;">
+        <div style="font-weight:600; font-size:13px;">😰 High Stress</div>
+        <div style="font-size:12px; color:#92400E;">Elevated stress levels persisting over time</div>
+      </div>
+    </div>
+    <div>
+      <h3 style="font-size:18px; font-weight:700; margin-bottom:16px;">How it works:</h3>
+      <ul class="steps-list">
+        <li>Safety checks run automatically each day based on your logged data</li>
+        <li>If a concerning pattern is detected, an alert appears on your Home screen as a colored banner</li>
+        <li>Each alert includes an explanation and actionable advice</li>
+        <li>Tap "Acknowledge" to dismiss the alert once you've reviewed it</li>
+        <li>Duplicate alerts are suppressed for 24 hours to avoid notification fatigue</li>
+      </ul>
+      <div class="callout-row">
+        <span class="callout-icon">🛡️</span>
+        <div class="callout-text">All safety monitoring is rule-based and evidence-backed. The app <strong>never provides medical diagnoses</strong> — it highlights patterns that may be worth discussing with a healthcare professional.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 9. TIPS ===================== -->
+<div class="section">
+  <span class="section-number">9</span>
+  <h2>Tips for Getting the Most Out of GrowthTrack</h2>
+
+  <div class="two-col">
+    <div class="screen-card" style="margin-bottom:16px;">
+      <div style="font-size:20px; margin-bottom:6px;">📅</div>
+      <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Log Daily</div>
+      <div style="font-size:13px; color:#4B5563;">Even a quick daily check-in (30 seconds) gives the AI enough data to personalize your recommendations. Consistency beats completeness.</div>
+    </div>
+    <div class="screen-card" style="margin-bottom:16px;">
+      <div style="font-size:20px; margin-bottom:6px;">🌙</div>
+      <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Prioritize Sleep Logging</div>
+      <div style="font-size:13px; color:#4B5563;">Sleep data drives the most impactful recommendations. Log it first thing each morning — it takes 10 seconds.</div>
+    </div>
+    <div class="screen-card" style="margin-bottom:16px;">
+      <div style="font-size:20px; margin-bottom:6px;">🔔</div>
+      <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Enable Notifications</div>
+      <div style="font-size:13px; color:#4B5563;">Go to Settings → Notifications to enable daily reminders for check-ins, workouts, meals, and sleep.</div>
+    </div>
+    <div class="screen-card" style="margin-bottom:16px;">
+      <div style="font-size:20px; margin-bottom:6px;">📱</div>
+      <div style="font-weight:600; font-size:14px; margin-bottom:4px;">Connect Apple Health</div>
+      <div style="font-size:13px; color:#4B5563;">If enabled, sleep and workout data can sync automatically from your watch or other health apps.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== FOOTER ===================== -->
+<div class="footer">
+  <p><strong>GrowthTrack</strong> v1.0 — Teen Physical Development Optimization</p>
+  <p style="margin-top:4px;">Evidence-based health guidance with parent oversight capabilities</p>
+  <p style="margin-top:8px;">Questions? Contact support through the app's Settings menu.</p>
+</div>
+
+</div>
+</body>
+</html>

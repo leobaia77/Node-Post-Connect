@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
 import { storage } from "./storage";
 import { db } from "./db";
 import { authMiddleware, generateToken, hashPassword, comparePassword, requireRole, type AuthRequest } from "./auth";
@@ -90,6 +91,10 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  app.get("/user-guide", (_req, res) => {
+    res.sendFile(path.resolve("public/user-guide.html"));
+  });
+
   // HEALTH CHECK
   app.get("/api/health", async (_req, res) => {
     try {
