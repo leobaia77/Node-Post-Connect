@@ -1,0 +1,90 @@
+Backend API Gaps — What Still Needs to Be Built
+The mobile app has been updated to match the backend's actual paths, field names, and query parameter formats. Below is the refined list of what the backend still needs to implement for full app functionality.
+
+CONFIRMED GAPS — Backend Needs to Build These
+1. onboardingComplete field (HIGH PRIORITY)
+The mobile app checks user.onboardingComplete after login/register to decide whether to show onboarding or the main app
+Currently, the app uses a fallback: if the user has goals set in their profile, it assumes onboarding is complete
+Ideal fix: Add an onboardingComplete boolean to the users table and include it in /api/auth/login, /api/auth/register, and /api/auth/me responses
+Also need a way to set this to true — either via PUT /api/profile or a dedicated endpoint like POST /api/onboarding/complete
+2. Security Word + Password Reset (HIGH PRIORITY)
+Three things needed:
+
+Store securityWord during registration — The app now sends securityWord in the register body. The backend needs to hash and store it.
+POST /api/auth/verify-security-word — Accept { email, securityWord }, return { valid: boolean }
+POST /api/auth/reset-password — Accept { email, securityWord, newPassword }, return { success: boolean }
+3. Mental Health Logging (HIGH PRIORITY)
+POST /api/mental-health — Create mental health log
+Body: { date, type ("meditation"|"mood"|"journal"), subType, durationMinutes, moodLevel, notes }
+GET /api/mental-health — Retrieve mental health logs
+Query params: ?start_date=&end_date=
+Requires a mentalHealthLogs table in the database
+4. Email Data Export (LOW PRIORITY)
+POST /api/data-export/email — Send data export to user's email
+Body: { format: "json"|"csv" }
+The app has this feature in the UI but it can gracefully handle errors if this endpoint doesn't exist yet
+5. Enhanced Sleep Fields (LOW PRIORITY — app has workaround)
+The app currently packs sleepQuality (1-5), nightWakeups (count), and disturbances (array) into the notes field as text
+Ideal fix: Add these columns to the sleep logs table: sleepQuality (integer 1-5), nightWakeups (integer), disturbances (text array or JSON)
+6. Enhanced Workout Fields (LOW PRIORITY — app has workaround)
+The app currently packs exercise details into the notes field as text
+Ideal fix: Add an exercises JSON column to the workout logs table to store structured data: [{ name, sets, reps, weight }]
+7. Enhanced PT Adherence Fields (LOW PRIORITY — data sent but ignored)
+The app sends these fields but the backend likely ignores them:
+difficultyRating (1-5)
+painLevel ("none" | "mild" | "significant")
+cobbAngle (number, Cobb angle measurement)
+lastMeasuredDate (ISO date string)
+backFeeling (string)
+durationMinutes (number)
+Ideal fix: Add these columns to the PT adherence table
+ALREADY FIXED ON MOBILE APP SIDE
+These issues from the original audit have been resolved by updating the mobile app:
+
+Issue	What was wrong	Fix applied
+painFlag vs hasPainFlag	App sent painFlag	App now sends hasPainFlag
+protein/carbs/fat vs proteinG/carbsG/fatG	App sent wrong field names	App now sends proteinG/carbsG/fatG
+description vs notes (nutrition)	App sent description	App now sends notes
+startDate/endDate vs start_date/end_date	CamelCase query params	App now sends snake_case
+GET /api/checkin vs /api/checkins	Singular path	App now uses /api/checkins (plural)
+GET /api/workout vs /api/workouts	Singular path	App now uses /api/workouts (plural)
+Brace paths /api/brace-*	Wrong base path	App now uses /api/scoliosis/brace-*
+Symptom paths /api/scoliosis-symptoms	Wrong path format	App now uses /api/scoliosis/symptoms
+Brace schedule update PUT vs PATCH	Wrong HTTP method	App now uses PATCH
+PT routine create/update paths	Wrong paths	App now uses /api/scoliosis/routines
+/api/user-profile endpoint	Separate endpoint doesn't exist	App now routes to /api/profile instead
+Data export path /api/data-export	Wrong path	App now uses /api/export-data
+Account delete missing confirmEmail	No body sent	App now sends { confirmEmail }
+securityWord not sent on register	Missing from request body	App now includes it
+Auth response structure	App expected flat user object	App now normalizes split user/profile/userProfile response
+BACKEND HAS BUT APP DOESN'T USE YET
+These endpoints exist on the backend but the mobile app doesn't currently use them. They can be integrated later:
+
+GET /api/safety-alerts — User safety alerts
+PUT /api/safety-alerts/:id/acknowledge — Acknowledge an alert
+POST /api/safety-check — Trigger manual safety check
+POST /api/push-token — Store Expo push notification token
+FIELD REFERENCE (Current State After Fixes)
+Check-in POST body:
+{
+  "date": "2025-06-15",
+  "energyLevel": 7,
+  "sorenessLevel": 3,
+  "moodLevel": 8,
+  "stressLevel": 4,
+  "hasPainFlag": false,
+  "painNotes": null
+}
+Nutrition POST body:
+{
+  "date": "2025-06-15",
+  "mealType": "lunch",
+  "notes": "Grilled chicken salad",
+  "calories": 650,
+  "proteinG": 35,
+  "carbsG": 80,
+  "fatG": 20,
+  "source": "manual"
+}
+All GET log queries use snake_case:
+?start_date=2025-06-01&end_date=2025-06-30

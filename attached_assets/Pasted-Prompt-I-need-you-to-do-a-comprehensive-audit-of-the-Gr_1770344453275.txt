@@ -1,0 +1,186 @@
+Prompt:
+I need you to do a comprehensive audit of the GrowthTrack backend API to make sure all endpoints are implemented, working correctly, and aligned with the mobile app frontend. The mobile app is a React Native Expo app that communicates with this backend via REST API with Bearer token authentication.
+
+Here is the complete list of API endpoints the mobile app calls, grouped by feature. Please verify each one exists, accepts the correct HTTP method, handles the expected request body, and returns the expected response format.
+
+1. AUTHENTICATION
+POST /api/auth/register
+
+Body: { email, password, displayName, role: "user" }
+Expected response: { token: string, user: { id, email, displayName, role, onboardingComplete } }
+Note: The role field should only accept "user" or "admin". The app no longer has parent/teen distinctions - only "user" and "admin" roles.
+POST /api/auth/login
+
+Body: { email, password }
+Expected response: { token: string, user: { id, email, displayName, role, onboardingComplete } }
+GET /api/auth/me (requires auth)
+
+Expected response: { user: { id, email, displayName, role, onboardingComplete } }
+POST /api/auth/verify-security-word (no auth required)
+
+Body: { email, securityWord }
+Expected response: { valid: boolean }
+POST /api/auth/reset-password (no auth required)
+
+Body: { email, securityWord, newPassword }
+Expected response: { success: boolean }
+2. PROFILE MANAGEMENT
+GET /api/profile (requires auth)
+
+Expected response: User profile with { id, userId, dateOfBirth, ageRange, goals, sports, weeklyAvailability, healthConnected }
+PUT /api/profile (requires auth)
+
+Body: Partial profile data (e.g., { ageRange: "13-15" }, { sports: [...] }, { weeklyAvailability: {...} })
+Used during onboarding to save each step progressively
+GET /api/user-profile (requires auth)
+
+Same as /api/profile (duplicate endpoint)
+PUT /api/user-profile (requires auth)
+
+Same as PUT /api/profile
+PUT /api/goals (requires auth)
+
+Body: { goals: [{ id, name, priority }] }
+3. HEALTH LOGGING
+POST /api/checkin (requires auth)
+
+Body: { date, energyLevel (1-10), sorenessLevel (1-10), moodLevel (1-10), stressLevel (1-10), painFlag (boolean), painNotes (string|null) }
+GET /api/checkin?startDate=&endDate= (requires auth)
+
+Query params: optional startDate, endDate
+Returns array of check-in logs
+POST /api/sleep (requires auth)
+
+Body: { date, totalHours (string), source (string), bedtime, wakeTime, sleepQuality (1-5), nightWakeups (number), disturbances (array of strings) }
+GET /api/sleep?startDate=&endDate= (requires auth)
+
+Returns array of sleep logs
+POST /api/workout (requires auth)
+
+Body: { date, workoutType (string), durationMinutes (number), rpe (number|null), notes (string|null), source (string), exercises (array with name/sets/reps/weight) }
+GET /api/workout?startDate=&endDate= (requires auth)
+
+Returns array of workout logs
+POST /api/nutrition (requires auth)
+
+Body: { date, mealType (string), description (string|null), calories (number|null), protein (number|null), carbs (number|null), fat (number|null), source (string) }
+GET /api/nutrition?startDate=&endDate= (requires auth)
+
+Returns array of nutrition logs
+POST /api/mental-health (requires auth)
+
+Body: { date, type ("meditation"|"mood"|"journal"), subType (string), durationMinutes (number|null), moodLevel (number|null), notes (string|null), intensity (number|null), feelings (array|null) }
+GET /api/mental-health?startDate=&endDate= (requires auth)
+
+Returns array of mental health logs
+4. SCOLIOSIS CARE
+GET /api/scoliosis/status (requires auth)
+
+Returns scoliosis support status for the user
+POST /api/scoliosis/enable (requires auth)
+
+Enables scoliosis support for the user
+GET /api/scoliosis/exercises (requires auth)
+
+Returns list of PT exercises
+GET /api/brace-schedules (requires auth)
+
+Returns brace wear schedules
+POST /api/brace-schedules (requires auth)
+
+Creates a new brace schedule
+PUT /api/brace-schedules/:id (requires auth)
+
+Updates a brace schedule
+GET /api/brace-logs?date= (requires auth)
+
+Returns brace wear logs, optionally filtered by date
+GET /api/brace-logs/active (requires auth)
+
+Returns the currently active brace session (if any)
+POST /api/brace-logs/start (requires auth)
+
+Body: { notes (string|undefined) }
+Starts a new brace wear session
+POST /api/brace-logs/:id/end (requires auth)
+
+Body: { notes (string|undefined) }
+Ends an active brace session
+POST /api/brace-logs (requires auth)
+
+Creates a manual brace log entry
+GET /api/pt-routines (requires auth)
+
+Returns PT exercise routines
+POST /api/pt-routines (requires auth)
+
+Creates a new PT routine
+PUT /api/pt-routines/:id (requires auth)
+
+Updates a PT routine
+GET /api/pt-adherence/:routineId (requires auth)
+
+Returns PT adherence for a specific routine
+GET /api/pt-adherence?startDate=&endDate= (requires auth)
+
+Returns PT adherence logs filtered by date range
+POST /api/pt-adherence (requires auth)
+
+Body: { routineId, date, exercisesCompleted, difficultyRating (1-5), painLevel ("none"|"mild"|"significant"), notes, cobbAngle (number|null), lastMeasuredDate (string|null), backFeeling (string|null) }
+GET /api/scoliosis-symptoms?startDate=&endDate= (requires auth)
+
+Returns symptom logs
+POST /api/scoliosis-symptoms (requires auth)
+
+Logs scoliosis symptoms
+5. RECOMMENDATIONS & INSIGHTS
+GET /api/recommendations?date= (requires auth)
+
+Returns personalized recommendations with structure: { date, today_actions, week_focus, nutrition_guidance, training_guidance, sleep_guidance, escalation_flags, confidence_notes }
+GET /api/morning-brief?date= (requires auth)
+
+Returns morning brief with sleep/training/nutrition/checkin/PT summaries
+POST /api/recommendations/actions/complete (requires auth)
+
+Body: { actionId (string), completed (boolean) }
+6. DATA MANAGEMENT
+GET /api/data-export?format=json|csv (requires auth)
+
+Exports user's health data in specified format
+POST /api/data-export/email (requires auth)
+
+Body: { format: "json"|"csv" }
+Sends data export to user's registered email
+DELETE /api/account (requires auth)
+
+Schedules account deletion (30-day window)
+7. HEALTH SYNC (from Apple HealthKit)
+POST /api/health-sync (requires auth)
+
+Body: { sleep: [...], workouts: [...], activity: [...], nutrition: [...] }
+Syncs health data from iOS HealthKit
+Key things to verify:
+User roles - The app only uses "user" and "admin" roles. There should be no "parent" or "teen" role references remaining. If the backend still has parent/teen logic, it needs to be updated to use user/admin only.
+
+onboardingComplete field - The /api/auth/me and login/register responses must include onboardingComplete (boolean). The app uses this to decide whether to show onboarding screens or the main app.
+
+Date filtering - All GET endpoints for logs (checkin, sleep, workout, nutrition, mental-health, pt-adherence, scoliosis-symptoms) should support startDate and endDate query parameters.
+
+Error responses - All error responses should return JSON with { error: string } or { error: string, message: string }. The app reads both fields.
+
+401 handling - When a token is expired or invalid, the backend should return 401. The app clears local storage and redirects to login on 401.
+
+Security word - Registration should store the security word for account recovery. The verify-security-word and reset-password endpoints need to work together for the password reset flow.
+
+Enhanced meal data - The nutrition POST endpoint should accept and store carbs and fat fields in addition to calories and protein.
+
+Enhanced workout data - The workout POST endpoint should accept and store an exercises array with individual exercise details (name, sets, reps, weight).
+
+Mental health types - The mental-health endpoint should handle three types: "meditation" (with subType and durationMinutes), "mood" (with moodLevel, intensity, feelings), and "journal" (with notes/content).
+
+PT adherence enhancements - The pt-adherence POST should accept difficultyRating, painLevel, cobbAngle, lastMeasuredDate, and backFeeling fields.
+
+Account deletion - There should be a DELETE /api/account endpoint that schedules account removal.
+
+Data export - There should be GET /api/data-export and POST /api/data-export/email endpoints.
+
