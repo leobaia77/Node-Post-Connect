@@ -34,7 +34,7 @@ This project uses a **mobile-first architecture** with:
 
 ### Key Features
 - **User & Profile Management:** Role-based (user, admin) with health tracking profiles and customizable goals. Includes onboarding flow tracking (`onboardingComplete` flag) and security word for password reset.
-- **Health Logging:** Comprehensive logging for daily check-ins, sleep (with quality/wakeups/disturbances), workouts (with exercises array and intensity), nutrition, and mental health (mood, anxiety, stress, etc.).
+- **Health Logging:** Comprehensive logging for daily check-ins (nullable painNotes), sleep (with bedtime, wakeTime, quality, wakeups, disturbances array), workouts (expanded types: sport_practice, gym, pt_rehab, mobility, cardio, strength, hiit, flexibility, swimming, water_polo, running, yoga, other), nutrition, and mental health (mood, anxiety, stress, etc.).
 - **Mental Health Logging:** Dedicated module for tracking mental health metrics with type enum (mood, anxiety, stress, motivation, body_image, social, general), mood levels, and notes. Endpoints: `GET/POST /api/mental-health`.
 - **Safety Alert System:** Monitors health data against predefined rules to generate supportive alerts for concerning patterns (e.g., sleep deficit, overtraining, pain flags). Alerts support push notifications via Expo Push API.
 - **AI Recommendations (LLM Orchestrator):** Generates personalized, evidence-based health recommendations using OpenAI GPT models (via Replit AI Integrations). It incorporates a strict safety filter to prevent harmful advice (e.g., extreme dieting, unapproved supplements) and validates all recommendations against an internal evidence library.

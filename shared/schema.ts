@@ -10,7 +10,7 @@ import { z } from "zod";
 export const userRoleEnum = pgEnum("user_role", ["user", "admin"]);
 export const ageRangeEnum = pgEnum("age_range", ["13-14", "15-16", "17-19"]);
 export const dataSourceEnum = pgEnum("data_source", ["manual", "apple_health", "other"]);
-export const workoutTypeEnum = pgEnum("workout_type", ["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other"]);
+export const workoutTypeEnum = pgEnum("workout_type", ["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other", "strength", "hiit", "flexibility", "swimming", "water_polo", "running", "yoga"]);
 export const mealTypeEnum = pgEnum("meal_type", ["breakfast", "lunch", "dinner", "snack"]);
 export const alertTypeEnum = pgEnum("alert_type", ["sleep_deficit", "training_spike", "pain_flag", "low_intake", "overtraining", "low_energy", "high_stress", "restrictive_eating"]);
 export const severityEnum = pgEnum("severity", ["info", "warning", "critical"]);
@@ -81,7 +81,7 @@ export const sleepLogs = pgTable("sleep_logs", {
   totalHours: decimal("total_hours", { precision: 4, scale: 2 }),
   sleepQuality: integer("sleep_quality"),
   nightWakeups: integer("night_wakeups"),
-  disturbances: jsonb("disturbances").$type<string[]>().default([]),
+  disturbances: text("disturbances").array(),
   source: dataSourceEnum("source").default("manual").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

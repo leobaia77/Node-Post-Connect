@@ -1,0 +1,90 @@
+Backend API Troubleshooting & Fixes Needed for GrowthTrack Mobile App
+
+I'm building the GrowthTrack mobile app that connects to the backend at https://node-post-connect.replit.app. I've tested every endpoint the app uses with a valid auth token and found several issues. Here's the full breakdown:
+
+1. GET /api/recommendations returns 500
+
+Request: GET /api/recommendations with valid Bearer token
+Response: {"error":"Failed to generate recommendations"} (HTTP 500)
+This is likely an unhandled exception inside the recommendation generation logic. Could be a missing dependency (e.g., AI/LLM service down), a null reference on a user who has no logged data yet, or a database query error.
+Please check the server logs for the stack trace when this endpoint is called. The user has a valid profile and userProfile, but may not have enough historical data for the recommendation engine.
+2. POST /api/checkin requires painNotes to be a string, but it should accept null or be optional
+
+Sending "painNotes": null returns: {"error":"Expected string, received null"} (HTTP 400)
+Omitting painNotes entirely returns: {"error":"Failed to save check-in"} (HTTP 500)
+Sending "painNotes": "" (empty string) works fine (HTTP 200)
+Fix needed: The validation schema should allow painNotes to be null or optional. When a user has no pain (hasPainFlag: false), there are no pain notes to provide. The field should accept null, an empty string, or simply be omitted from the request body.
+3. POST /api/workout field name mismatch and enum values
+
+The backend expects workoutType and durationMinutes, but the mobile app was sending type and duration.
+The backend validates workoutType against this enum: 'sport_practice' | 'gym' | 'pt_rehab' | 'mobility' | 'cardio' | 'other'
+The mobile app sends values like 'strength', 'hiit', 'flexibility', 'swimming', 'water_polo' which are not in that enum.
+Fix needed (pick one):
+Option A (preferred): Expand the enum to include: 'strength', 'hiit', 'flexibility', 'swimming', 'water_polo', 'running', 'yoga'
+Option B: Add documentation for the accepted enum values so the mobile app can map them (e.g., strength → gym, swimming → sport_practice)
+4. POST /api/sleep — enhanced fields are accepted but not stored
+
+POST /api/sleep with {"date","bedtime","wakeTime","totalHours","sleepQuality","nightWakeups","disturbances","source"} returns HTTP 200, but the response shows bedtime: null, wakeTime: null, sleepQuality: null, nightWakeups: null, disturbances: null — meaning only totalHours and source are actually stored.
+Also, sending a disturbances array (e.g., ["noise"]) causes a 500 error: {"error":"Failed to save sleep log"}
+Fix needed: The sleep logs table should store these fields:
+bedtime (string, e.g., "22:00")
+wakeTime (string, e.g., "06:30")
+sleepQuality (integer 1-5)
+nightWakeups (integer)
+disturbances (JSON array of strings, e.g., ["noise","stress","temperature"])
+5. DELETE /api/auth/account returns 404 — route not registered
+
+Request: DELETE /api/auth/account with Bearer token and body {"confirmEmail":"user@email.com"}
+Response: Cannot DELETE /api/auth/account (HTML 404 page)
+This means the route handler isn't registered. The mobile app has an "Delete Account" feature in settings.
+Fix needed: Register a DELETE /api/auth/account route that accepts { confirmEmail } in the body, verifies it matches the authenticated user's email, and deletes the user account and all associated data.
+6. POST /api/auth/verify-security-word returns 404 — route not registered
+
+Request: POST /api/auth/verify-security-word with { email, securityWord }
+Response: Cannot POST /api/auth/verify-security-word (HTML 404 page)
+The mobile app uses a two-step password reset: first verify the security word, then reset the password.
+Fix needed: Register POST /api/auth/verify-security-word that accepts { email, securityWord } and returns { valid: boolean }.
+7. POST /api/auth/reset-password returns 400 {"error":"Invalid request"}
+
+Request: POST /api/auth/reset-password with { email, securityWord, newPassword }
+The route exists but returns {"error":"Invalid request"} — likely the security word wasn't stored during registration, so verification fails.
+Fix needed: Make sure securityWord is hashed and stored during registration (POST /api/auth/register already receives it in the body). Then this endpoint should verify the security word before allowing the password reset.
+8. GET /api/recommendations (500 — investigation needed)
+
+This is the main 500 error the user sees. The mobile app calls this on the home screen to show personalized recommendations.
+The error "Failed to generate recommendations" is a catch-all. Please check:
+Is this endpoint trying to call an external AI/LLM service? If so, is the API key configured?
+Is it doing a database query that fails when the user has no logged data yet?
+Is there a null reference on userProfile.goals or userProfile.sports when they're empty arrays?
+Ideal behavior: If the user has no data yet, return an empty array [] or a set of default starter recommendations instead of throwing a 500 error.
+SUMMARY TABLE
+
+Endpoint	Method	Current Status	Issue
+/api/recommendations	GET	500	Server error generating recommendations
+/api/checkin	POST	400/500	painNotes must allow null or be optional
+/api/workout	POST	400	Field names: needs workoutType/durationMinutes. Enum missing common types
+/api/sleep	POST	200 (partial)	bedtime, wakeTime, sleepQuality, nightWakeups, disturbances not stored. Array in disturbances causes 500
+/api/auth/account	DELETE	404	Route not registered
+/api/auth/verify-security-word	POST	404	Route not registered
+/api/auth/reset-password	POST	400	Security word not stored/validated
+WORKING ENDPOINTS (confirmed)
+
+Endpoint	Method	Status
+/api/auth/login	POST	200
+/api/auth/register	POST	200
+/api/auth/me	GET	200
+/api/profile	GET/PUT	200
+/api/goals	PUT	200
+/api/checkins	GET	200
+/api/sleep	GET	200
+/api/workouts	GET	200
+/api/nutrition	GET/POST	200
+/api/mental-health	POST	200
+/api/morning-brief	GET	200
+/api/push-token	POST	200
+/api/onboarding/complete	POST	200
+/api/scoliosis/status	GET	200
+/api/scoliosis/brace-logs	GET	200
+/api/scoliosis/symptoms	GET	200
+/api/safety-alerts	GET	200
+/api/export-data	GET	200

@@ -21,6 +21,71 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+function getDefaultRecommendations(date: string) {
+  return {
+    date,
+    today_actions: [
+      {
+        id: "default-001",
+        category: "sleep" as const,
+        priority: "high" as const,
+        action: "Aim for 8-10 hours of sleep tonight",
+        detail: "Consistent sleep is one of the most important factors for health, recovery, and performance.",
+        timing: "before bed",
+        evidence_ids: [],
+        why: "Quality sleep supports growth, recovery, and mental well-being."
+      },
+      {
+        id: "default-002",
+        category: "nutrition" as const,
+        priority: "medium" as const,
+        action: "Stay hydrated throughout the day",
+        detail: "Drink water regularly, especially before and after any physical activity.",
+        timing: null,
+        evidence_ids: [],
+        why: "Proper hydration supports energy levels and physical performance."
+      },
+      {
+        id: "default-003",
+        category: "recovery" as const,
+        priority: "medium" as const,
+        action: "Take a few minutes to stretch or do light movement",
+        detail: "Even 5-10 minutes of stretching can help with recovery and flexibility.",
+        timing: null,
+        evidence_ids: [],
+        why: "Regular stretching helps prevent injury and improves mobility."
+      }
+    ],
+    week_focus: {
+      theme: "Build healthy habits",
+      key_points: [
+        "Log your daily check-ins to start tracking your progress",
+        "Record your sleep to identify patterns",
+        "Track your workouts to monitor training load"
+      ],
+      evidence_ids: []
+    },
+    nutrition_guidance: {
+      hydration_reminder: "Aim for 8+ cups of water daily, more on active days.",
+      evidence_ids: []
+    },
+    training_guidance: {
+      recommended_volume_today: "moderate" as const,
+      specific_suggestions: ["Start logging your workouts to get personalized training guidance."],
+      cautions: [],
+      evidence_ids: []
+    },
+    sleep_guidance: {
+      target_bedtime: "22:00",
+      target_wake: "07:00",
+      wind_down_suggestion: "Start winding down 30 minutes before bed. Limit screen time.",
+      evidence_ids: []
+    },
+    escalation_flags: [],
+    confidence_notes: "These are general starter recommendations. Log more data to receive personalized guidance."
+  };
+}
+
 export async function registerRoutes(
   httpServer: Server,
   app: Express
@@ -151,8 +216,11 @@ export async function registerRoutes(
       }
 
       const user = await storage.getUserByEmail(email);
-      if (!user || !user.securityWordHash) {
-        return res.status(400).json({ error: "Invalid request" });
+      if (!user) {
+        return res.status(400).json({ error: "No account found with this email" });
+      }
+      if (!user.securityWordHash) {
+        return res.status(400).json({ error: "No security word set for this account. Password reset is not available." });
       }
 
       const validWord = await comparePassword(securityWord.toLowerCase(), user.securityWordHash);
@@ -278,7 +346,7 @@ export async function registerRoutes(
         sorenessLevel: z.number().min(1).max(10),
         moodLevel: z.number().min(1).max(10),
         stressLevel: z.number().min(1).max(10),
-        painNotes: z.string().optional(),
+        painNotes: z.string().nullish().transform(v => v ?? null),
         hasPainFlag: z.boolean().optional(),
       }).parse(req.body);
 
@@ -335,17 +403,32 @@ export async function registerRoutes(
 
       const sleepInput = z.object({
         date: z.string(),
+        bedtime: z.string().optional(),
+        wakeTime: z.string().optional(),
         totalHours: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
         sleepQuality: z.number().min(1).max(10).optional(),
-        nightWakeups: z.number().optional(),
+        nightWakeups: z.number().min(0).optional(),
         disturbances: z.array(z.string()).optional(),
         source: z.enum(["manual", "apple_health", "other"]).optional(),
-        notes: z.string().optional(),
       }).parse(req.body);
+
+      const parseTimeToDate = (timeStr: string, dateStr: string): Date => {
+        if (timeStr.includes("T") || timeStr.includes("-")) {
+          return new Date(timeStr);
+        }
+        return new Date(`${dateStr}T${timeStr.length <= 5 ? timeStr + ":00" : timeStr}`);
+      };
 
       const log = await storage.createSleepLog({
         teenProfileId: teenProfile.id,
-        ...sleepInput,
+        date: sleepInput.date,
+        totalHours: sleepInput.totalHours,
+        sleepQuality: sleepInput.sleepQuality,
+        nightWakeups: sleepInput.nightWakeups,
+        disturbances: sleepInput.disturbances || null,
+        source: sleepInput.source,
+        bedtime: sleepInput.bedtime ? parseTimeToDate(sleepInput.bedtime, sleepInput.date) : null,
+        wakeTime: sleepInput.wakeTime ? parseTimeToDate(sleepInput.wakeTime, sleepInput.date) : null,
       });
       res.json(log);
     } catch (error) {
@@ -384,7 +467,7 @@ export async function registerRoutes(
 
       const workoutInput = z.object({
         date: z.string(),
-        workoutType: z.enum(["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other"]),
+        workoutType: z.enum(["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other", "strength", "hiit", "flexibility", "swimming", "water_polo", "running", "yoga"]),
         sportName: z.string().optional(),
         durationMinutes: z.number().min(1),
         rpe: z.number().min(1).max(10).optional(),
@@ -728,10 +811,6 @@ export async function registerRoutes(
   // RECOMMENDATIONS ROUTES
   app.get("/api/recommendations", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
-        return res.status(503).json({ error: "AI recommendations service unavailable" });
-      }
-
       const { date } = req.query;
       const targetDate = date ? String(date) : format(new Date(), "yyyy-MM-dd");
 
@@ -745,28 +824,34 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Teen profile not found" });
       }
 
-      const { getOrGenerateRecommendations, buildMorningBrief } = await import("./services/llmOrchestrator");
+      if (!process.env.AI_INTEGRATIONS_OPENAI_API_KEY || !process.env.AI_INTEGRATIONS_OPENAI_BASE_URL) {
+        return res.json(getDefaultRecommendations(targetDate));
+      }
 
-      let recommendations = await getOrGenerateRecommendations(teenProfile.id, targetDate);
-      
-      if (!recommendations) {
-        const brief = await buildMorningBrief(teenProfile.id, targetDate);
+      try {
+        const { getOrGenerateRecommendations, buildMorningBrief } = await import("./services/llmOrchestrator");
+
+        let recs = await getOrGenerateRecommendations(teenProfile.id, targetDate);
         
-        await storage.createMorningBrief({
-          teenProfileId: teenProfile.id,
-          date: targetDate,
-          briefJson: brief as unknown as Record<string, unknown>,
-        });
+        if (!recs) {
+          const brief = await buildMorningBrief(teenProfile.id, targetDate);
+          
+          await storage.createMorningBrief({
+            teenProfileId: teenProfile.id,
+            date: targetDate,
+            briefJson: brief as unknown as Record<string, unknown>,
+          });
 
-        recommendations = await getOrGenerateRecommendations(teenProfile.id, targetDate);
+          recs = await getOrGenerateRecommendations(teenProfile.id, targetDate);
+        }
+
+        res.json(recs || getDefaultRecommendations(targetDate));
+      } catch (aiError: any) {
+        console.error("AI recommendation generation failed, returning defaults:", aiError?.message);
+        res.json(getDefaultRecommendations(targetDate));
       }
-
-      res.json(recommendations);
     } catch (error: any) {
-      console.error("Error generating recommendations:", error);
-      if (error.message?.includes("AI Integrations not configured")) {
-        return res.status(503).json({ error: "AI recommendations service unavailable" });
-      }
+      console.error("Error in recommendations endpoint:", error);
       res.status(500).json({ error: "Failed to generate recommendations" });
     }
   });
@@ -1511,7 +1596,7 @@ export async function registerRoutes(
   });
 
   // ACCOUNT DELETION - Required for App Store compliance
-  app.delete("/api/account", authMiddleware, async (req: AuthRequest, res) => {
+  const handleAccountDeletion = async (req: AuthRequest, res: any) => {
     try {
       const { confirmEmail } = req.body;
       const user = await storage.getUser(req.user!.userId);
@@ -1579,7 +1664,10 @@ export async function registerRoutes(
       console.error("Error deleting account:", error);
       res.status(500).json({ error: "Failed to delete account" });
     }
-  });
+  };
+
+  app.delete("/api/account", authMiddleware, handleAccountDeletion);
+  app.delete("/api/auth/account", authMiddleware, handleAccountDeletion);
 
   return httpServer;
 }
