@@ -32,6 +32,10 @@ This project uses a **mobile-first architecture** with:
 - **Migrations:** Managed with Drizzle Kit.
 - **Connection:** Node-postgres (pg) pool.
 
+### Health Monitoring
+- **Health Endpoint:** `GET /api/health` returns `{ status, database, timestamp }` with DB connectivity check (200 OK or 503 error).
+- **Check-in Upsert:** `POST /api/checkin` uses upsert pattern — updates existing check-in if one exists for the current day, creates new if not.
+
 ### Key Features
 - **User & Profile Management:** Role-based (user, admin) with health tracking profiles and customizable goals. Includes onboarding flow tracking (`onboardingComplete` flag) and security word for password reset.
 - **Health Logging:** Comprehensive logging for daily check-ins (nullable painNotes), sleep (with bedtime, wakeTime, quality, wakeups, disturbances array), workouts (expanded types: sport_practice, gym, pt_rehab, mobility, cardio, strength, hiit, flexibility, swimming, water_polo, running, yoga, other), nutrition, and mental health (mood, anxiety, stress, etc.).
@@ -48,7 +52,7 @@ This project uses a **mobile-first architecture** with:
   - **Educational Resources:** Curated content organized by topic (exercise, brace care, lifestyle, mental health) with external resource links.
   - **LLM Safety Rules:** Scoliosis-specific guardrails preventing advice that could override PT/orthotist prescriptions, with automatic escalation for red flag symptoms.
   - Mobile screens: `mobile/app/(teen-app)/scoliosis/` (dashboard, pt-routine, brace-tracker, symptom-log, resources)
-  - API endpoints: `/api/pt-routines`, `/api/pt-exercises`, `/api/pt-adherence`, `/api/brace-schedules`, `/api/brace-logs`, `/api/scoliosis-symptoms`, `/api/scoliosis/*` (new detailed routes)
+  - API endpoints: `/api/pt-routines`, `/api/pt-exercises`, `/api/brace-schedules`, `/api/brace-logs`, `/api/scoliosis-symptoms`, `/api/scoliosis/*` (detailed routes including PATCH `/api/scoliosis/routines/:id` for updates, POST `/api/scoliosis/pt-adherence` for adherence logging)
 
 ### Project Structure
 - `server/` - Express backend API
