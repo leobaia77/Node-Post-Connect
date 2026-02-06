@@ -8,7 +8,7 @@ import {
   nutritionLogs, ptRoutines, ptAdherenceLogs, ptRoutineExercises, braceSchedules,
   braceWearingLogs, symptomLogs, morningBriefs, recommendations, safetyAlerts, mentalHealthLogs
 } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { format, subDays } from "date-fns";
 import rateLimit from "express-rate-limit";
@@ -90,6 +90,16 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // HEALTH CHECK
+  app.get("/api/health", async (_req, res) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      res.json({ status: "ok", database: "connected", timestamp: new Date().toISOString() });
+    } catch {
+      res.status(503).json({ status: "error", database: "disconnected", timestamp: new Date().toISOString() });
+    }
+  });
+
   // AUTH ROUTES
   app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
@@ -617,40 +627,33 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
+      const routineInput = z.object({
+        routineName: z.string().min(1).max(200),
+        exercises: z.array(z.object({
+          name: z.string(),
+          sets: z.number().optional(),
+          reps: z.number().optional(),
+          duration: z.string().optional(),
+          notes: z.string().optional(),
+        })).optional().default([]),
+        prescribedBy: z.string().max(100).nullish(),
+        frequencyPerWeek: z.number().min(0).max(14).optional().default(0),
+      }).parse(req.body);
+
       const routine = await storage.createPtRoutine({
         teenProfileId: teenProfile.id,
-        ...req.body,
+        ...routineInput,
       });
       res.json(routine);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
       res.status(500).json({ error: "Failed to save PT routine" });
     }
   });
 
-  // PT ADHERENCE ROUTES
-  app.get("/api/pt-adherence", authMiddleware, async (req: AuthRequest, res) => {
-    try {
-      const routineId = req.query.routine_id as string;
-      if (!routineId) return res.status(400).json({ error: "Routine ID required" });
-
-      const startDate = req.query.start_date as string || format(subDays(new Date(), 30), "yyyy-MM-dd");
-      const endDate = req.query.end_date as string || format(new Date(), "yyyy-MM-dd");
-      
-      const logs = await storage.getPtAdherenceLogs(routineId, startDate, endDate);
-      res.json(logs);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get PT adherence logs" });
-    }
-  });
-
-  app.post("/api/pt-adherence", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
-    try {
-      const log = await storage.createPtAdherenceLog(req.body);
-      res.json(log);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to save PT adherence log" });
-    }
-  });
+  // PT ADHERENCE ROUTES (legacy routes removed — use /api/scoliosis/pt-adherence instead)
 
   // SAFETY ALERTS ROUTES (first registration removed - duplicate was at line ~754 with proper role check)
 
@@ -1048,6 +1051,38 @@ export async function registerRoutes(
     }
   });
 
+  // Update PT routine
+  app.patch("/api/scoliosis/routines/:id", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
+    try {
+      const routineId = req.params.id as string;
+
+      const updateInput = z.object({
+        routineName: z.string().min(1).max(200).optional(),
+        exercises: z.array(z.object({
+          name: z.string(),
+          sets: z.number().optional(),
+          reps: z.number().optional(),
+          duration: z.string().optional(),
+          notes: z.string().optional(),
+        })).optional(),
+        prescribedBy: z.string().max(100).nullish(),
+        frequencyPerWeek: z.number().min(0).max(14).optional(),
+      }).parse(req.body);
+
+      const updated = await storage.updatePtRoutine(routineId, updateInput);
+      if (!updated) {
+        return res.status(404).json({ error: "PT routine not found" });
+      }
+
+      res.json(updated);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      res.status(500).json({ error: "Failed to update PT routine" });
+    }
+  });
+
   // PT Adherence logs by profile
   app.get("/api/scoliosis/pt-adherence", authMiddleware, async (req: AuthRequest, res) => {
     try {
@@ -1285,7 +1320,7 @@ export async function registerRoutes(
   });
 
   // Manual brace log entry
-  app.post("/api/scoliosis/brace-logs", authMiddleware, async (req: AuthRequest, res) => {
+  app.post("/api/scoliosis/brace-logs", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
       const profile = await storage.getProfile(req.user!.userId);
       if (!profile) return res.status(404).json({ error: "Profile not found" });
@@ -1293,19 +1328,28 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
 
-      const { date, startTime, endTime, durationMinutes, notes } = req.body;
+      const braceLogInput = z.object({
+        date: z.string().optional(),
+        startTime: z.string().transform(v => new Date(v)),
+        endTime: z.string().transform(v => new Date(v)),
+        durationMinutes: z.number().min(0),
+        notes: z.string().nullish(),
+      }).parse(req.body);
 
       const log = await storage.createBraceWearingLog({
         teenProfileId: teenProfile.id,
-        date: date || format(new Date(), "yyyy-MM-dd"),
-        startTime,
-        endTime,
-        durationMinutes,
-        notes: notes || null,
+        date: braceLogInput.date || format(new Date(), "yyyy-MM-dd"),
+        startTime: braceLogInput.startTime,
+        endTime: braceLogInput.endTime,
+        durationMinutes: braceLogInput.durationMinutes,
+        notes: braceLogInput.notes || null,
       });
 
       res.json(log);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
       res.status(500).json({ error: "Failed to create brace log" });
     }
   });

@@ -60,6 +60,7 @@ export interface IStorage {
   // PT Routines
   getPtRoutines(teenProfileId: string): Promise<PtRoutine[]>;
   createPtRoutine(data: InsertPtRoutine): Promise<PtRoutine>;
+  updatePtRoutine(id: string, data: Partial<InsertPtRoutine>): Promise<PtRoutine | undefined>;
 
   // PT Adherence Logs
   getPtAdherenceLogs(routineId: string, startDate: string, endDate: string): Promise<PtAdherenceLog[]>;
@@ -255,6 +256,11 @@ export class DatabaseStorage implements IStorage {
 
   async createPtRoutine(data: InsertPtRoutine): Promise<PtRoutine> {
     const result = await db.insert(ptRoutines).values(data).returning();
+    return result[0];
+  }
+
+  async updatePtRoutine(id: string, data: Partial<InsertPtRoutine>): Promise<PtRoutine | undefined> {
+    const result = await db.update(ptRoutines).set({ ...data, updatedAt: new Date() }).where(eq(ptRoutines.id, id)).returning();
     return result[0];
   }
 
