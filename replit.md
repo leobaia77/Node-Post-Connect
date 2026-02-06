@@ -32,19 +32,22 @@ This project uses a **mobile-first architecture** with:
 - **Connection:** Node-postgres (pg) pool.
 
 ### Key Features
-- **User & Profile Management:** Role-based (user, admin) with health tracking profiles and customizable goals.
-- **Health Logging:** Comprehensive logging for daily check-ins, sleep, workouts, and nutrition.
+- **User & Profile Management:** Role-based (user, admin) with health tracking profiles and customizable goals. Includes onboarding flow tracking (`onboardingComplete` flag) and security word for password reset.
+- **Health Logging:** Comprehensive logging for daily check-ins, sleep (with quality/wakeups/disturbances), workouts (with exercises array and intensity), nutrition, and mental health (mood, anxiety, stress, etc.).
+- **Mental Health Logging:** Dedicated module for tracking mental health metrics with type enum (mood, anxiety, stress, motivation, body_image, social, general), mood levels, and notes. Endpoints: `GET/POST /api/mental-health`.
 - **Safety Alert System:** Monitors health data against predefined rules to generate supportive alerts for concerning patterns (e.g., sleep deficit, overtraining, pain flags). Alerts support push notifications via Expo Push API.
 - **AI Recommendations (LLM Orchestrator):** Generates personalized, evidence-based health recommendations using OpenAI GPT models (via Replit AI Integrations). It incorporates a strict safety filter to prevent harmful advice (e.g., extreme dieting, unapproved supplements) and validates all recommendations against an internal evidence library.
 - **Evidence Library:** A RAG-based system providing research-backed health recommendations from authoritative sources across categories like sleep, nutrition, training, bone health, and scoliosis, used to ground LLM outputs.
+- **Security Word & Password Reset:** Users can set a security word during registration. Password reset flow: verify security word via `POST /api/auth/verify-security-word`, then reset via `POST /api/auth/reset-password`.
+- **Onboarding Flow:** Track user onboarding completion via `POST /api/onboarding/complete`. Login and `/api/auth/me` responses include `onboardingComplete` status.
 - **Scoliosis Care Module:** Comprehensive scoliosis management including:
-  - **PT Routine Management:** Prescribed physical therapy exercises with timer, reps/sets tracking, and adherence logging. Exercises linked via junction table for reusability.
+  - **PT Routine Management:** Prescribed physical therapy exercises with timer, reps/sets tracking, frequency per week, and enhanced adherence logging (difficulty rating, pain level, back feeling, Cobb angle tracking, brace minutes). Exercises linked via junction table for reusability.
   - **Brace Tracking:** Real-time session timer, daily wear time goals, progress visualization against prescribed hours.
-  - **Symptom Logging:** Interactive body diagram with coordinate-based pain location tracking, discomfort levels, and red flag warnings for serious symptoms (numbness, weakness, bladder issues).
+  - **Symptom Logging:** Interactive body diagram with coordinate-based pain location tracking (`backPainLocation`), curve discomfort levels (`curveDiscomfort`), and red flag warnings for serious symptoms (numbness, weakness, bladder issues).
   - **Educational Resources:** Curated content organized by topic (exercise, brace care, lifestyle, mental health) with external resource links.
   - **LLM Safety Rules:** Scoliosis-specific guardrails preventing advice that could override PT/orthotist prescriptions, with automatic escalation for red flag symptoms.
   - Mobile screens: `mobile/app/(teen-app)/scoliosis/` (dashboard, pt-routine, brace-tracker, symptom-log, resources)
-  - API endpoints: `/api/pt-routines`, `/api/pt-exercises`, `/api/pt-adherence`, `/api/brace-schedules`, `/api/brace-logs`, `/api/scoliosis-symptoms`
+  - API endpoints: `/api/pt-routines`, `/api/pt-exercises`, `/api/pt-adherence`, `/api/brace-schedules`, `/api/brace-logs`, `/api/scoliosis-symptoms`, `/api/scoliosis/*` (new detailed routes)
 
 ### Project Structure
 - `server/` - Express backend API
@@ -76,7 +79,7 @@ This project uses a **mobile-first architecture** with:
 
 ### App Store Readiness (Mobile)
 - **Legal Documentation:** Privacy Policy and Terms of Service screens accessible from Settings with comprehensive health data policies, medical disclaimers, and age requirements (13+).
-- **Data Portability:** Export feature supporting JSON and CSV formats with email and download options. Located at `mobile/app/(teen-app)/settings/data-export.tsx`. Backend endpoint: `GET /api/export-data?format=json|csv` - exports all user health data including check-ins, sleep, workouts, nutrition, PT routines, brace logs, symptoms, and safety alerts.
+- **Data Portability:** Export feature supporting JSON and CSV formats with email and download options. Located at `mobile/app/(teen-app)/settings/data-export.tsx`. Backend endpoints: `GET /api/export-data?format=json|csv` (direct download) and `POST /api/data-export/email` (queued email export) - exports all user health data including check-ins, sleep, workouts, nutrition, mental health, PT routines, brace logs, symptoms, and safety alerts.
 - **Account Deletion:** 2-step confirmation flow with explicit user acknowledgment before permanent deletion. Includes warnings about data loss and HealthKit disconnection. Backend endpoint: `DELETE /api/account` - requires `confirmEmail` in body matching user's email, performs cascade deletion of all user data respecting foreign key constraints.
 - **Offline Support:** 
   - Data caching with 7-day expiry using AsyncStorage

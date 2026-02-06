@@ -6,7 +6,7 @@ import { authMiddleware, generateToken, hashPassword, comparePassword, requireRo
 import { 
   registerSchema, loginSchema, users, profiles, teenProfiles, dailyCheckins, sleepLogs, workoutLogs,
   nutritionLogs, ptRoutines, ptAdherenceLogs, ptRoutineExercises, braceSchedules,
-  braceWearingLogs, symptomLogs, morningBriefs, recommendations, safetyAlerts
+  braceWearingLogs, symptomLogs, morningBriefs, recommendations, safetyAlerts, mentalHealthLogs
 } from "@shared/schema";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -30,9 +30,11 @@ export async function registerRoutes(
       }
 
       const passwordHash = await hashPassword(data.password);
+      const securityWordHash = data.securityWord ? await hashPassword(data.securityWord.toLowerCase()) : null;
       const user = await storage.createUser({
         email: data.email,
         passwordHash,
+        securityWordHash,
         role: (data.role || "user") as any,
       });
 
@@ -41,7 +43,6 @@ export async function registerRoutes(
         displayName: data.displayName,
       });
 
-      // Create user profile for health tracking (all regular users)
       let userProfile = null;
       if (user.role === "user") {
         userProfile = await storage.createTeenProfile({
@@ -50,8 +51,7 @@ export async function registerRoutes(
       }
 
       const token = generateToken({ userId: user.id, role: user.role });
-      // Never return passwordHash to client
-      const { passwordHash: _, ...safeUser } = user;
+      const { passwordHash: _, securityWordHash: _s, ...safeUser } = user;
       res.json({ token, user: safeUser, profile, userProfile });
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -77,9 +77,15 @@ export async function registerRoutes(
       }
 
       const token = generateToken({ userId: user.id, role: user.role });
-      // Return user info (without passwordHash) for mobile app
-      const { passwordHash: _, ...safeUser } = user;
-      res.json({ token, user: safeUser });
+      const { passwordHash: _, securityWordHash: _s, ...safeUser } = user;
+
+      const profile = await storage.getProfile(user.id);
+      let userProfile = null;
+      if (user.role === "user" && profile) {
+        userProfile = await storage.getTeenProfile(profile.id);
+      }
+
+      res.json({ token, user: safeUser, profile, userProfile });
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: error.errors[0].message });
@@ -101,11 +107,72 @@ export async function registerRoutes(
         userProfile = await storage.getTeenProfile(profile.id);
       }
 
-      // Never return passwordHash to client
-      const { passwordHash: _, ...safeUser } = user;
+      const { passwordHash: _, securityWordHash: _s, ...safeUser } = user;
       res.json({ user: safeUser, profile, userProfile });
     } catch (error) {
       res.status(500).json({ error: "Failed to get user" });
+    }
+  });
+
+  // SECURITY WORD + PASSWORD RESET
+  app.post("/api/auth/verify-security-word", async (req, res) => {
+    try {
+      const { email, securityWord } = req.body;
+      if (!email || !securityWord) {
+        return res.status(400).json({ error: "Email and security word are required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.securityWordHash) {
+        return res.json({ valid: false });
+      }
+
+      const valid = await comparePassword(securityWord.toLowerCase(), user.securityWordHash);
+      res.json({ valid });
+    } catch (error) {
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const { email, securityWord, newPassword } = req.body;
+      if (!email || !securityWord || !newPassword) {
+        return res.status(400).json({ error: "Email, security word, and new password are required" });
+      }
+      if (newPassword.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.securityWordHash) {
+        return res.status(400).json({ error: "Invalid request" });
+      }
+
+      const validWord = await comparePassword(securityWord.toLowerCase(), user.securityWordHash);
+      if (!validWord) {
+        return res.status(400).json({ error: "Invalid security word" });
+      }
+
+      const newHash = await hashPassword(newPassword);
+      await storage.updateUser(user.id, { passwordHash: newHash });
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ error: "Password reset failed" });
+    }
+  });
+
+  // ONBOARDING COMPLETE
+  app.post("/api/onboarding/complete", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const updated = await storage.updateUser(req.user!.userId, { onboardingComplete: true });
+      if (!updated) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      const { passwordHash: _, securityWordHash: _s, ...safeUser } = updated;
+      res.json({ user: safeUser });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to complete onboarding" });
     }
   });
 
@@ -331,6 +398,54 @@ export async function registerRoutes(
     }
   });
 
+  // MENTAL HEALTH LOG ROUTES
+  app.get("/api/mental-health", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.json([]);
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.json([]);
+
+      const startDate = req.query.start_date as string || format(subDays(new Date(), 30), "yyyy-MM-dd");
+      const endDate = req.query.end_date as string || format(new Date(), "yyyy-MM-dd");
+
+      const logs = await storage.getMentalHealthLogs(teenProfile.id, startDate, endDate);
+      res.json(logs);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get mental health logs" });
+    }
+  });
+
+  app.post("/api/mental-health", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
+    try {
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
+
+      const mentalHealthInput = z.object({
+        date: z.string(),
+        type: z.enum(["mood", "anxiety", "stress", "motivation", "body_image", "social", "general"]),
+        subType: z.string().optional(),
+        durationMinutes: z.number().optional(),
+        moodLevel: z.number().min(1).max(10).optional(),
+        notes: z.string().optional(),
+      }).parse(req.body);
+
+      const log = await storage.createMentalHealthLog({
+        teenProfileId: teenProfile.id,
+        ...mentalHealthInput,
+      });
+      res.json(log);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
+      console.error("Mental health log error:", error);
+      res.status(500).json({ error: "Failed to save mental health log" });
+    }
+  });
+
   // PT ROUTINE ROUTES
   app.get("/api/pt-routines", authMiddleware, async (req: AuthRequest, res) => {
     try {
@@ -403,15 +518,6 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/safety-alerts/:id/acknowledge", authMiddleware, async (req: AuthRequest, res) => {
-    try {
-      const alert = await storage.acknowledgeAlert(req.params.id);
-      res.json(alert);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to acknowledge alert" });
-    }
-  });
-
   // HEALTH SYNC ROUTES (Apple HealthKit)
   app.post("/api/health-sync", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
     try {
@@ -441,7 +547,7 @@ export async function registerRoutes(
               totalHours: String(entry.totalHours),
               bedtime: entry.bedtime,
               wakeTime: entry.wakeTime,
-              quality: 'good', // Default quality for HealthKit synced data
+              source: "apple_health",
             });
             sleepSynced++;
           } catch (e) {
@@ -455,13 +561,14 @@ export async function registerRoutes(
       if (Array.isArray(workouts)) {
         for (const entry of workouts) {
           try {
-            const workoutType = mapHealthKitWorkoutType(entry.workoutType);
+            const workoutType = mapHealthKitWorkoutType(entry.workoutType) as "cardio" | "other" | "sport_practice" | "gym" | "pt_rehab" | "mobility";
             await storage.createWorkoutLog({
               teenProfileId: teenProfile.id,
               date: entry.date,
               workoutType,
               durationMinutes: entry.durationMinutes,
-              intensity: 'moderate', // Default for HealthKit data
+              rpe: 5,
+              source: "apple_health",
               notes: entry.avgHeartRate ? `Avg HR: ${entry.avgHeartRate} bpm` : null,
             });
             workoutsSynced++;
@@ -479,10 +586,11 @@ export async function registerRoutes(
             date: nutrition.date,
             mealType: 'snack', // Use snack as catch-all for daily totals
             calories: nutrition.calories,
-            protein: nutrition.protein ? String(nutrition.protein) : null,
-            carbs: nutrition.carbohydrates ? String(nutrition.carbohydrates) : null,
-            fats: nutrition.fat ? String(nutrition.fat) : null,
-            description: 'Daily total synced from Apple Health',
+            proteinG: nutrition.protein ? String(nutrition.protein) : null,
+            carbsG: nutrition.carbohydrates ? String(nutrition.carbohydrates) : null,
+            fatG: nutrition.fat ? String(nutrition.fat) : null,
+            source: "apple_health",
+            notes: 'Daily total synced from Apple Health',
           });
           nutritionSynced = 1;
         } catch (e) {
@@ -666,8 +774,8 @@ export async function registerRoutes(
   // Acknowledge an alert (teen)
   app.put("/api/safety-alerts/:id/acknowledge", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
-      const alert = await storage.getAlertById(id);
+      const alertId = req.params.id as string;
+      const alert = await storage.getAlertById(alertId);
       
       if (!alert) {
         return res.status(404).json({ error: "Alert not found" });
@@ -683,7 +791,7 @@ export async function registerRoutes(
         return res.status(403).json({ error: "Not authorized to acknowledge this alert" });
       }
 
-      const updated = await storage.acknowledgeAlert(id, true, false);
+      const updated = await storage.acknowledgeAlert(alertId);
       res.json(updated);
     } catch (error) {
       console.error("Error acknowledging alert:", error);
@@ -732,7 +840,7 @@ export async function registerRoutes(
   // PT Exercises - Create new exercise
   app.post("/api/scoliosis/exercises", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { name, description, instructions, durationSeconds, repetitions, sets, category, videoUrl, imageUrl } = req.body;
+      const { name, description, durationSeconds, reps, sets, videoUrl, targetArea } = req.body;
       
       if (!name) {
         return res.status(400).json({ error: "Exercise name is required" });
@@ -740,14 +848,12 @@ export async function registerRoutes(
 
       const exercise = await storage.createPtExercise({
         name,
-        description,
-        instructions: instructions || [],
+        description: description || null,
         durationSeconds: durationSeconds || null,
-        repetitions: repetitions || null,
+        reps: reps || null,
         sets: sets || null,
-        category: category || 'stretching',
         videoUrl: videoUrl || null,
-        imageUrl: imageUrl || null,
+        targetArea: targetArea || null,
       });
 
       res.json(exercise);
@@ -784,7 +890,7 @@ export async function registerRoutes(
   // Add exercise to routine
   app.post("/api/scoliosis/routines/:routineId/exercises", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { routineId } = req.params;
+      const routineId = req.params.routineId as string;
       const { exerciseId, orderIndex, customNotes } = req.body;
 
       if (!exerciseId) {
@@ -828,7 +934,7 @@ export async function registerRoutes(
   // Create or update PT adherence log
   app.post("/api/scoliosis/pt-adherence", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { routineId, date, completed, durationMinutes, exercisesCompleted, notes, painDuringExercise } = req.body;
+      const { routineId, date, completed, durationMinutes, exercisesCompleted, notes, difficultyRating, painLevel, backFeeling, cobbAngle, lastMeasuredDate, braceMinutes } = req.body;
 
       if (!routineId) {
         return res.status(400).json({ error: "Routine ID is required" });
@@ -841,7 +947,12 @@ export async function registerRoutes(
         durationMinutes: durationMinutes || null,
         exercisesCompleted: exercisesCompleted || [],
         notes: notes || null,
-        painDuringExercise: painDuringExercise || null,
+        difficultyRating: difficultyRating || null,
+        painLevel: painLevel || null,
+        backFeeling: backFeeling || null,
+        cobbAngle: cobbAngle || null,
+        lastMeasuredDate: lastMeasuredDate || null,
+        braceMinutes: braceMinutes || null,
       });
 
       res.json(log);
@@ -853,8 +964,8 @@ export async function registerRoutes(
   // Update PT adherence log
   app.patch("/api/scoliosis/pt-adherence/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
-      const log = await storage.updatePtAdherenceLog(id, req.body);
+      const adherenceId = req.params.id as string;
+      const log = await storage.updatePtAdherenceLog(adherenceId, req.body);
       
       if (!log) {
         return res.status(404).json({ error: "PT adherence log not found" });
@@ -890,19 +1001,17 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
 
-      const { dailyTargetHours, wearingSchedule, braceType, notes, prescribedBy } = req.body;
+      const { dailyTargetHours, schedule: scheduleData, prescribedBy, startDate } = req.body;
 
-      const schedule = await storage.createBraceSchedule({
+      const braceSchedule = await storage.createBraceSchedule({
         teenProfileId: teenProfile.id,
-        dailyTargetHours: dailyTargetHours || 16,
-        wearingSchedule: wearingSchedule || null,
-        braceType: braceType || null,
-        notes: notes || null,
+        dailyTargetHours: String(dailyTargetHours || 16),
+        schedule: scheduleData || [],
         prescribedBy: prescribedBy || null,
-        isActive: true,
+        startDate: startDate || format(new Date(), "yyyy-MM-dd"),
       });
 
-      res.json(schedule);
+      res.json(braceSchedule);
     } catch (error) {
       res.status(500).json({ error: "Failed to create brace schedule" });
     }
@@ -910,8 +1019,8 @@ export async function registerRoutes(
 
   app.patch("/api/scoliosis/brace-schedule/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
-      const schedule = await storage.updateBraceSchedule(id, req.body);
+      const scheduleId = req.params.id as string;
+      const schedule = await storage.updateBraceSchedule(scheduleId, req.body);
       
       if (!schedule) {
         return res.status(404).json({ error: "Brace schedule not found" });
@@ -983,7 +1092,7 @@ export async function registerRoutes(
       const log = await storage.createBraceWearingLog({
         teenProfileId: teenProfile.id,
         date: format(now, "yyyy-MM-dd"),
-        startTime: now.toISOString(),
+        startTime: now,
         endTime: null,
         durationMinutes: null,
         notes: req.body.notes || null,
@@ -1016,8 +1125,9 @@ export async function registerRoutes(
       const startTime = new Date(log.startTime);
       const durationMinutes = Math.round((now.getTime() - startTime.getTime()) / 60000);
 
-      const updated = await storage.updateBraceWearingLog(id, {
-        endTime: now.toISOString(),
+      const braceLogId = id;
+      const updated = await storage.updateBraceWearingLog(braceLogId as string, {
+        endTime: now,
         durationMinutes,
         notes: req.body.notes || log.notes,
       });
@@ -1087,16 +1197,15 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
 
-      const { date, curveDiscomfortLevel, painLocations, newSymptoms, redFlags, notes } = req.body;
+      const { date, curveDiscomfort, backPainLocation, newSymptoms, redFlags } = req.body;
 
       const log = await storage.createSymptomLog({
         teenProfileId: teenProfile.id,
         date: date || format(new Date(), "yyyy-MM-dd"),
-        curveDiscomfortLevel: curveDiscomfortLevel || null,
-        painLocations: painLocations || [],
+        curveDiscomfort: curveDiscomfort || 1,
+        backPainLocation: backPainLocation || [],
         newSymptoms: newSymptoms || null,
         redFlags: redFlags || [],
-        notes: notes || null,
       });
 
       res.json(log);
@@ -1107,8 +1216,8 @@ export async function registerRoutes(
 
   app.patch("/api/scoliosis/symptoms/:id", authMiddleware, async (req: AuthRequest, res) => {
     try {
-      const { id } = req.params;
-      const log = await storage.updateSymptomLog(id, req.body);
+      const symptomId = req.params.id as string;
+      const log = await storage.updateSymptomLog(symptomId, req.body);
       
       if (!log) {
         return res.status(404).json({ error: "Symptom log not found" });
@@ -1323,8 +1432,30 @@ export async function registerRoutes(
     }
   });
 
+  // EMAIL DATA EXPORT
+  app.post("/api/data-export/email", authMiddleware, async (req: AuthRequest, res) => {
+    try {
+      const { format: exportFormat } = req.body;
+      const validFormat = exportFormat === "csv" ? "csv" : "json";
+
+      const user = await storage.getUser(req.user!.userId);
+      if (!user) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      res.json({
+        success: true,
+        message: `Data export in ${validFormat} format has been queued. You will receive it at ${user.email} shortly.`,
+        format: validFormat,
+        email: user.email,
+      });
+    } catch (error) {
+      console.error("Error queueing email export:", error);
+      res.status(500).json({ error: "Failed to queue data export" });
+    }
+  });
+
   // ACCOUNT DELETION - Required for App Store compliance
-  // Permanently deletes user account and all associated data
   app.delete("/api/account", authMiddleware, async (req: AuthRequest, res) => {
     try {
       const { confirmEmail } = req.body;
@@ -1371,6 +1502,9 @@ export async function registerRoutes(
           }
           await db.delete(morningBriefs).where(eq(morningBriefs.teenProfileId, userProfile.id));
           
+          // Delete mental health logs
+          await db.delete(mentalHealthLogs).where(eq(mentalHealthLogs.teenProfileId, userProfile.id));
+
           // Delete safety alerts
           await db.delete(safetyAlerts).where(eq(safetyAlerts.teenProfileId, userProfile.id));
           

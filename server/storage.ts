@@ -4,7 +4,7 @@ import {
   users, profiles, teenProfiles, dailyCheckins, sleepLogs, workoutLogs,
   nutritionLogs, ptRoutines, ptAdherenceLogs, ptExercises, ptRoutineExercises,
   braceSchedules, braceWearingLogs, symptomLogs, morningBriefs,
-  recommendations, safetyAlerts,
+  recommendations, safetyAlerts, mentalHealthLogs,
   type User, type InsertUser, type Profile, type InsertProfile,
   type TeenProfile, type InsertTeenProfile, type DailyCheckin, type InsertDailyCheckin,
   type SleepLog, type InsertSleepLog, type WorkoutLog, type InsertWorkoutLog,
@@ -13,7 +13,8 @@ import {
   type PtRoutineExercise, type InsertPtRoutineExercise, type BraceSchedule, type InsertBraceSchedule,
   type BraceWearingLog, type InsertBraceWearingLog, type SymptomLog, type InsertSymptomLog,
   type MorningBrief, type InsertMorningBrief,
-  type Recommendation, type InsertRecommendation, type SafetyAlert, type InsertSafetyAlert
+  type Recommendation, type InsertRecommendation, type SafetyAlert, type InsertSafetyAlert,
+  type MentalHealthLog, type InsertMentalHealthLog
 } from "@shared/schema";
 
 // IMPORTANT: Health data is NOT used for advertising - Apple HealthKit requirement
@@ -24,6 +25,7 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, data: Partial<User>): Promise<User | undefined>;
 
   // Profiles
   getProfile(userId: string): Promise<Profile | undefined>;
@@ -102,6 +104,10 @@ export interface IStorage {
   getAlertById(id: string): Promise<SafetyAlert | undefined>;
   createSafetyAlert(data: InsertSafetyAlert): Promise<SafetyAlert>;
   acknowledgeAlert(id: string): Promise<SafetyAlert | undefined>;
+
+  // Mental Health Logs
+  getMentalHealthLogs(teenProfileId: string, startDate: string, endDate: string): Promise<MentalHealthLog[]>;
+  createMentalHealthLog(data: InsertMentalHealthLog): Promise<MentalHealthLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -118,6 +124,11 @@ export class DatabaseStorage implements IStorage {
 
   async createUser(user: InsertUser): Promise<User> {
     const result = await db.insert(users).values(user).returning();
+    return result[0];
+  }
+
+  async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
+    const result = await db.update(users).set(data).where(eq(users.id, id)).returning();
     return result[0];
   }
 
@@ -456,6 +467,22 @@ export class DatabaseStorage implements IStorage {
 
   async updateSymptomLog(id: string, data: Partial<SymptomLog>): Promise<SymptomLog | undefined> {
     const result = await db.update(symptomLogs).set(data).where(eq(symptomLogs.id, id)).returning();
+    return result[0];
+  }
+
+  // Mental Health Logs
+  async getMentalHealthLogs(teenProfileId: string, startDate: string, endDate: string): Promise<MentalHealthLog[]> {
+    return db.select().from(mentalHealthLogs)
+      .where(and(
+        eq(mentalHealthLogs.teenProfileId, teenProfileId),
+        gte(mentalHealthLogs.date, startDate),
+        lte(mentalHealthLogs.date, endDate)
+      ))
+      .orderBy(desc(mentalHealthLogs.date));
+  }
+
+  async createMentalHealthLog(data: InsertMentalHealthLog): Promise<MentalHealthLog> {
+    const result = await db.insert(mentalHealthLogs).values(data).returning();
     return result[0];
   }
 }

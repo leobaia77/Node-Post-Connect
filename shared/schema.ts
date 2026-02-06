@@ -14,13 +14,16 @@ export const workoutTypeEnum = pgEnum("workout_type", ["sport_practice", "gym", 
 export const mealTypeEnum = pgEnum("meal_type", ["breakfast", "lunch", "dinner", "snack"]);
 export const alertTypeEnum = pgEnum("alert_type", ["sleep_deficit", "training_spike", "pain_flag", "low_intake", "overtraining", "low_energy", "high_stress", "restrictive_eating"]);
 export const severityEnum = pgEnum("severity", ["info", "warning", "critical"]);
+export const mentalHealthTypeEnum = pgEnum("mental_health_type", ["mood", "anxiety", "stress", "motivation", "body_image", "social", "general"]);
 
 // Users table
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   passwordHash: text("password_hash").notNull(),
+  securityWordHash: text("security_word_hash"),
   role: userRoleEnum("role").notNull().default("user"),
+  onboardingComplete: boolean("onboarding_complete").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -74,6 +77,9 @@ export const sleepLogs = pgTable("sleep_logs", {
   bedtime: timestamp("bedtime"),
   wakeTime: timestamp("wake_time"),
   totalHours: decimal("total_hours", { precision: 4, scale: 2 }),
+  sleepQuality: integer("sleep_quality"),
+  nightWakeups: integer("night_wakeups"),
+  disturbances: jsonb("disturbances").$type<string[]>().default([]),
   source: dataSourceEnum("source").default("manual").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -87,6 +93,7 @@ export const workoutLogs = pgTable("workout_logs", {
   sportName: varchar("sport_name", { length: 100 }),
   durationMinutes: integer("duration_minutes").notNull(),
   rpe: integer("rpe"),
+  exercises: jsonb("exercises").$type<{ name: string; sets?: number; reps?: number; weight?: number }[]>().default([]),
   notes: text("notes"),
   source: dataSourceEnum("source").default("manual").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -114,6 +121,7 @@ export const ptRoutines = pgTable("pt_routines", {
   routineName: varchar("routine_name", { length: 200 }).notNull(),
   exercises: jsonb("exercises").$type<{ name: string; sets?: number; reps?: number; duration?: string; notes?: string }[]>().default([]),
   prescribedBy: varchar("prescribed_by", { length: 100 }),
+  frequencyPerWeek: integer("frequency_per_week").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
@@ -125,6 +133,12 @@ export const ptAdherenceLogs = pgTable("pt_adherence_logs", {
   date: date("date").notNull(),
   completed: boolean("completed").default(false),
   exercisesCompleted: jsonb("exercises_completed").$type<string[]>().default([]),
+  durationMinutes: integer("duration_minutes"),
+  difficultyRating: integer("difficulty_rating"),
+  painLevel: varchar("pain_level", { length: 20 }),
+  backFeeling: varchar("back_feeling", { length: 100 }),
+  cobbAngle: decimal("cobb_angle", { precision: 5, scale: 1 }),
+  lastMeasuredDate: date("last_measured_date"),
   braceMinutes: integer("brace_minutes"),
   notes: text("notes"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -217,6 +231,19 @@ export const safetyAlerts = pgTable("safety_alerts", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Mental health logs table
+export const mentalHealthLogs = pgTable("mental_health_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  teenProfileId: uuid("teen_profile_id").references(() => teenProfiles.id).notNull(),
+  date: date("date").notNull(),
+  type: mentalHealthTypeEnum("type").notNull(),
+  subType: varchar("sub_type", { length: 100 }),
+  durationMinutes: integer("duration_minutes"),
+  moodLevel: integer("mood_level"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -306,12 +333,18 @@ export const insertSafetyAlertSchema = createInsertSchema(safetyAlerts).omit({
   createdAt: true,
 });
 
+export const insertMentalHealthLogSchema = createInsertSchema(mentalHealthLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Auth schemas
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
   role: z.enum(["user", "admin"]).default("user"),
   displayName: z.string().min(2).max(100),
+  securityWord: z.string().min(2).max(100).optional(),
 });
 
 export const loginSchema = z.object({
@@ -354,3 +387,5 @@ export type Recommendation = typeof recommendations.$inferSelect;
 export type InsertRecommendation = z.infer<typeof insertRecommendationSchema>;
 export type SafetyAlert = typeof safetyAlerts.$inferSelect;
 export type InsertSafetyAlert = z.infer<typeof insertSafetyAlertSchema>;
+export type MentalHealthLog = typeof mentalHealthLogs.$inferSelect;
+export type InsertMentalHealthLog = z.infer<typeof insertMentalHealthLogSchema>;
