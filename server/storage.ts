@@ -42,6 +42,7 @@ export interface IStorage {
   // Daily Check-ins
   getCheckins(teenProfileId: string, startDate: string, endDate: string): Promise<DailyCheckin[]>;
   createCheckin(data: InsertDailyCheckin): Promise<DailyCheckin>;
+  updateCheckin(id: string, data: Partial<InsertDailyCheckin>): Promise<DailyCheckin>;
   getCheckinByDate(teenProfileId: string, date: string): Promise<DailyCheckin | undefined>;
 
   // Sleep Logs
@@ -184,6 +185,11 @@ export class DatabaseStorage implements IStorage {
 
   async createCheckin(data: InsertDailyCheckin): Promise<DailyCheckin> {
     const result = await db.insert(dailyCheckins).values(data).returning();
+    return result[0];
+  }
+
+  async updateCheckin(id: string, data: Partial<InsertDailyCheckin>): Promise<DailyCheckin> {
+    const result = await db.update(dailyCheckins).set(data).where(eq(dailyCheckins.id, id)).returning();
     return result[0];
   }
 

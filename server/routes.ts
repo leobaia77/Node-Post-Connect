@@ -351,11 +351,18 @@ export async function registerRoutes(
       }).parse(req.body);
 
       const today = format(new Date(), "yyyy-MM-dd");
-      const checkin = await storage.createCheckin({
-        teenProfileId: teenProfile.id,
-        date: today,
-        ...checkinInput,
-      });
+      const existing = await storage.getCheckinByDate(teenProfile.id, today);
+
+      let checkin;
+      if (existing) {
+        checkin = await storage.updateCheckin(existing.id, checkinInput);
+      } else {
+        checkin = await storage.createCheckin({
+          teenProfileId: teenProfile.id,
+          date: today,
+          ...checkinInput,
+        });
+      }
 
       if (checkinInput.hasPainFlag) {
         await storage.createSafetyAlert({
