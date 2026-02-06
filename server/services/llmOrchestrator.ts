@@ -468,7 +468,7 @@ export async function getOrGenerateRecommendations(
 }
 
 export async function buildMorningBrief(teenProfileId: string, date: string): Promise<MorningBrief> {
-  const { dailyCheckins, sleepLogs, workoutLogs, nutritionLogs, ptRoutines, ptAdherenceLogs, braceSchedules, braceWearingLogs, scoliosisSymptomLogs } = await import("@shared/schema");
+  const { dailyCheckins, sleepLogs, workoutLogs, nutritionLogs, ptRoutines, ptAdherenceLogs, braceSchedules, braceWearingLogs, symptomLogs } = await import("@shared/schema");
   const { gte, lte, desc } = await import("drizzle-orm");
   
   const endDate = new Date(date);
@@ -551,10 +551,9 @@ export async function buildMorningBrief(teenProfileId: string, date: string): Pr
   const braceSchedule = await db
     .select()
     .from(braceSchedules)
-    .where(and(
-      eq(braceSchedules.teenProfileId, teenProfileId),
-      eq(braceSchedules.isActive, true)
-    ))
+    .where(
+      eq(braceSchedules.teenProfileId, teenProfileId)
+    )
     .limit(1);
 
   let braceWear: { targetHours: number; recentDays: { date: string; hoursWorn: number }[] } | undefined;
@@ -578,7 +577,7 @@ export async function buildMorningBrief(teenProfileId: string, date: string): Pr
     }
 
     braceWear = {
-      targetHours: braceSchedule[0].dailyTargetHours || 16,
+      targetHours: parseFloat(braceSchedule[0].dailyTargetHours) || 16,
       recentDays: Array.from(braceByDate.entries())
         .map(([d, mins]) => ({
           date: d,
@@ -590,17 +589,17 @@ export async function buildMorningBrief(teenProfileId: string, date: string): Pr
 
   const recentSymptoms = await db
     .select()
-    .from(scoliosisSymptomLogs)
+    .from(symptomLogs)
     .where(and(
-      eq(scoliosisSymptomLogs.teenProfileId, teenProfileId),
-      gte(scoliosisSymptomLogs.date, startDateStr),
-      lte(scoliosisSymptomLogs.date, date)
+      eq(symptomLogs.teenProfileId, teenProfileId),
+      gte(symptomLogs.date, startDateStr),
+      lte(symptomLogs.date, date)
     ))
-    .orderBy(desc(scoliosisSymptomLogs.date));
+    .orderBy(desc(symptomLogs.date));
 
   const scoliosisSymptoms = recentSymptoms.map(s => ({
     date: s.date,
-    discomfortLevel: s.curveDiscomfortLevel || 0,
+    discomfortLevel: s.curveDiscomfort || 0,
     hasRedFlags: ((s.redFlags as string[]) || []).length > 0
   }));
 

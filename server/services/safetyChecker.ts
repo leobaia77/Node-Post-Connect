@@ -472,7 +472,6 @@ export async function runSafetyChecks(
           alertType: result.alertType,
           severity: result.severity,
           message: result.message,
-          shareWithParent: result.shareWithParent,
           resourceLink: result.resourceLink,
         }).returning();
         
@@ -691,9 +690,9 @@ export function stopSafetyCheckScheduler(): void {
     schedulerInterval = null;
   }
   
-  for (const [teenId, timeout] of teenScheduleTimeouts) {
+  teenScheduleTimeouts.forEach((timeout, teenId) => {
     clearTimeout(timeout);
-  }
+  });
   teenScheduleTimeouts.clear();
   
   console.log("[SafetyChecker] Scheduler stopped");

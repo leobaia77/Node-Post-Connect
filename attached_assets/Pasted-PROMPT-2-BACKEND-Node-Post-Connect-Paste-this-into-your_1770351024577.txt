@@ -1,0 +1,94 @@
+PROMPT 2: BACKEND (Node-Post-Connect)
+Paste this into your Node-Post-Connect Replit chat:
+
+I had an external code audit performed on this backend and the mobile app that connects to it (Growth-Track-Mobile). The audit found critical issues that need your review. I need you to:
+
+Verify each item below — check the actual code to confirm whether the issue exists as described
+Flag YES or NO for each item — does it actually need fixing?
+For every YES, propose a specific fix with file and line reference
+Create a prioritized implementation plan grouped into phases
+
+BLOCKER — .env Not in .gitignore
+File: .gitignore
+The .gitignore excludes node_modules, dist, .DS_Store, server/public, and *.tar.gz, but there is NO .env entry. If a .env file exists locally with DATABASE_URL, SESSION_SECRET, or AI_INTEGRATIONS_OPENAI_API_KEY, it will be committed to the public GitHub repo.
+Verify: Check .gitignore — is .env listed?
+BLOCKER — Hardcoded Fallback JWT Secret
+File: server/auth.ts, line ~5
+const JWT_SECRET = process.env.SESSION_SECRET || "fallback-secret-change-in-production";
+If SESSION_SECRET is not set, every JWT token is signed with a publicly known string. Any attacker who reads this source code can forge valid JWTs for any user, including admin.
+Verify: Check server/auth.ts — is there a hardcoded fallback string? Is SESSION_SECRET guaranteed to be set in production?
+BLOCKER — Duplicate Safety Alerts Route Registration
+File: server/routes.ts
+GET /api/safety-alerts is registered TWICE:
+
+First at ~line 507 with authMiddleware only (any authenticated user)
+Second at ~line 754 with authMiddleware, requireRole("user") (user role only)
+
+Express matches the first registration. The second (with proper role checking) is dead code.
+Verify: Search routes.ts for all occurrences of /api/safety-alerts. How many GET handlers exist?
+BLOCKER — buildMorningBrief() References Non-Existent Schema Fields
+File: server/services/llmOrchestrator.ts, buildMorningBrief() function (~line 470+)
+This function will crash at runtime because it references:
+
+scoliosisSymptomLogs — the schema table is actually called symptomLogs
+braceSchedules.isActive — this column does not exist in the braceSchedules table definition in shared/schema.ts
+scoliosisSymptomLogs.curveDiscomfortLevel — the actual field name is symptomLogs.curveDiscomfort
+braceSchedule[0].dailyTargetHours used directly as a number — but it's a decimal type that Drizzle returns as a string
+
+Since this function is called by GET /api/recommendations, the entire recommendations feature is broken.
+Verify: Open server/services/llmOrchestrator.ts and find the buildMorningBrief() function. Check each of the 4 references above against shared/schema.ts. Do they match?
+BLOCKER — safetyChecker.ts Writes shareWithParent but Column Doesn't Exist
+File: server/services/safetyChecker.ts, ~line 470-477
+The safety checker creates alerts with a shareWithParent field in the insert object, but the safetyAlerts table in shared/schema.ts has no shareWithParent column. This will either silently fail or throw a runtime error.
+Verify: Check the safetyAlerts table definition in shared/schema.ts — is there a share_with_parent column? Then check the runSafetyChecks() function — does it include shareWithParent in the insert?
+BLOCKER — Anyone Can Register as Admin
+File: shared/schema.ts (registerSchema) + server/routes.ts (register handler)
+The register validation schema accepts role: z.enum(["user", "admin"]).default("user"). The register route passes (data.role || "user") as any. Any user can send {"role": "admin"} in their registration request and get full admin access.
+Verify: Check the registerSchema in shared/schema.ts — does it accept "admin" as a role? Check the register handler in routes.ts — does it force the role to "user"?
+HIGH — CORS Allows All Origins
+File: server/index.ts, line ~10
+app.use(cors());
+This allows requests from any website. If this backend also serves a web UI (and the package.json suggests it does with React/Vite dependencies), this is an XSS vector.
+Verify: Check server/index.ts — is cors() called with any origin configuration?
+HIGH — No Rate Limiting on Auth Endpoints
+Files: server/routes.ts — register, login, verify-security-word, reset-password routes
+No rate limiting exists on any auth endpoint. Attackers can brute-force passwords, spam account creation, or enumerate email addresses via the verify-security-word endpoint (which returns {valid: false} differently for non-existent users vs wrong security words).
+Verify: Search the codebase for rate-limit, rateLimit, or express-rate-limit. Is any rate limiting configured?
+HIGH — endBraceSession Bypasses Ownership Check
+File: server/routes.ts, POST /api/scoliosis/brace-logs/:id/end handler (~line 1108)
+The handler calls storage.getBraceWearingLogsByRange("") with an empty string as teenProfileId. This searches ALL brace logs across all users, then filters by id in JavaScript. An attacker who guesses a valid UUID could end another user's brace session.
+Verify: Check the endBraceSession handler — what value is passed as the first argument to getBraceWearingLogsByRange()?
+HIGH — No Body Validation on Most POST Routes
+Most POST/PUT handlers spread ...req.body directly into storage methods without Zod validation. Only register, login, and mental-health have schemas. Example: createCheckin({ teenProfileId, date, ...req.body }) — an attacker could override teenProfileId or inject id/createdAt.
+Verify: Check a few POST handlers (checkin, sleep, workout, nutrition) — do they validate req.body with a schema before using it?
+HIGH — Workout Type Mapping Returns Invalid Enum Values
+File: server/routes.ts, mapHealthKitWorkoutType() function (~line 617)
+The function maps HealthKit types to strings like 'sport', 'strength', 'flexibility', 'hiit'. But the workoutTypeEnum in shared/schema.ts only allows: 'sport_practice', 'gym', 'pt_rehab', 'mobility', 'cardio', 'other'. PostgreSQL will reject inserts with invalid enum values.
+Verify: Compare the return values in mapHealthKitWorkoutType() against the workoutTypeEnum definition in shared/schema.ts.
+HIGH — Response Logging Leaks Sensitive Data
+File: server/index.ts, ~line 54
+logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+Every API response body (including JWT tokens, user emails, and health data) is logged to console.
+Verify: Check the logging middleware — does it log response bodies? Does it redact sensitive fields?
+HIGH — Email Export Is Fake
+File: server/routes.ts, POST /api/data-export/email handler
+Returns {success: true, message: "queued"} but never actually sends an email. No email service is configured.
+Verify: Check the handler — is there any actual email sending logic, or does it just return a success response?
+HIGH — Scoliosis Enable Route Passes Wrong ID
+File: server/routes.ts, POST /api/scoliosis/enable handler (~line 1276)
+The handler calls storage.updateTeenProfile(teenProfile.id, { hasScoliosisSupport: true }) but updateTeenProfile() expects a profileId (from the profiles table), not a teenProfileId. This means the update will match nothing and silently fail.
+Verify: Check what updateTeenProfile() in server/storage.ts uses in its WHERE clause. Then check what the enable handler passes as the first argument.
+MEDIUM — Massive Frontend Dependencies in Backend package.json
+File: package.json
+The backend includes 30+ React/Radix UI/Tailwind/Recharts packages in dependencies. These are leftovers from a Replit monorepo setup. They inflate node_modules, slow installs, and increase attack surface but are never used by the Express server.
+Verify: Check package.json — are there React, @radix-ui, tailwind, recharts, framer-motion packages? Are they imported anywhere in server/?
+MEDIUM — No Unique Constraint on Daily Check-Ins
+File: shared/schema.ts, dailyCheckins table
+No unique constraint on (teen_profile_id, date). Users can submit unlimited check-ins per day, creating duplicate data that skews safety checks.
+Verify: Check the dailyCheckins table definition — is there a unique constraint on teenProfileId + date?
+MEDIUM — Unused Dependencies
+express-session, passport, passport-local, memorystore, connect-pg-simple, and ws are all in package.json dependencies but never imported anywhere in the server code. The app uses JWT auth, not sessions.
+Verify: Search the server/ directory for imports of express-session, passport, memorystore, or ws.
+LOW — No Database Migrations Tracked
+drizzle.config.ts outputs to ./migrations/ but no migrations directory exists. The db:push script modifies the database directly without migration files. This works for dev but is risky for production (no rollback capability).
+Verify: Does a migrations/ directory exist? Does the project use drizzle-kit push or drizzle-kit migrate?

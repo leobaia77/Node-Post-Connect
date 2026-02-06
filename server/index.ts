@@ -6,8 +6,14 @@ import cors from "cors";
 const app = express();
 const httpServer = createServer(app);
 
-// Enable CORS for mobile app connections
-app.use(cors());
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map(o => o.trim())
+  : undefined;
+
+app.use(cors({
+  origin: allowedOrigins || true,
+  credentials: true,
+}));
 
 declare module "http" {
   interface IncomingMessage {
@@ -52,7 +58,17 @@ app.use((req, res, next) => {
     if (path.startsWith("/api")) {
       let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
       if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+        const redacted = { ...capturedJsonResponse };
+        const sensitiveKeys = ["token", "passwordHash", "securityWordHash", "email"];
+        for (const key of sensitiveKeys) {
+          if (key in redacted) {
+            redacted[key] = "[REDACTED]";
+          }
+        }
+        if (redacted.user) {
+          redacted.user = "[REDACTED]";
+        }
+        logLine += ` :: ${JSON.stringify(redacted).substring(0, 200)}`;
       }
 
       log(logLine);

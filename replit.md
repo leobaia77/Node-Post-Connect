@@ -15,8 +15,9 @@ This project uses a **mobile-first architecture** with:
 
 ### Backend (This Project)
 - **Framework:** Express.js with TypeScript, providing RESTful API endpoints.
-- **Authentication:** JWT-based token authentication with bcryptjs for password hashing. Role-based access control enforced via middleware with two roles: 'user' (standard users) and 'admin' (administrators).
-- **CORS:** Enabled for cross-origin mobile app connections.
+- **Authentication:** JWT-based token authentication with bcryptjs for password hashing. Role-based access control enforced via middleware with two roles: 'user' (standard users) and 'admin' (administrators). Registration always forces role to 'user' (admin accounts must be created via database).
+- **Security:** Rate limiting on auth endpoints (20 requests/15 min), Zod validation on all POST routes, response log redaction for sensitive data, JWT secret requires SESSION_SECRET env var (no fallback).
+- **CORS:** Configurable via ALLOWED_ORIGINS env var (comma-separated). Defaults to allow-all in development.
 - **Build:** esbuild for production bundling, optimized for cold start performance.
 
 ### Mobile App (Separate Project)

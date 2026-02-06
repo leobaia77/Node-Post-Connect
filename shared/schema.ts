@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, timestamp, pgEnum, integer, decimal, date, boolean, jsonb, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, timestamp, pgEnum, integer, decimal, date, boolean, jsonb, uuid, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -67,7 +67,9 @@ export const dailyCheckins = pgTable("daily_checkins", {
   painNotes: text("pain_notes"),
   hasPainFlag: boolean("has_pain_flag").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  uniqueIndex("daily_checkins_teen_date_unique").on(table.teenProfileId, table.date),
+]);
 
 // Sleep logs table
 export const sleepLogs = pgTable("sleep_logs", {
@@ -342,7 +344,6 @@ export const insertMentalHealthLogSchema = createInsertSchema(mentalHealthLogs).
 export const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
-  role: z.enum(["user", "admin"]).default("user"),
   displayName: z.string().min(2).max(100),
   securityWord: z.string().min(2).max(100).optional(),
 });

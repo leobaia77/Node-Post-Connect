@@ -11,16 +11,22 @@ import {
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { format, subDays } from "date-fns";
+import rateLimit from "express-rate-limit";
 
-// IMPORTANT: Health data is NOT used for advertising - Apple HealthKit requirement
-// All health data is stored securely and only shared according to user preferences
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  message: { error: "Too many requests, please try again later" },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
   // AUTH ROUTES
-  app.post("/api/auth/register", async (req, res) => {
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
     try {
       const data = registerSchema.parse(req.body);
       
@@ -35,7 +41,7 @@ export async function registerRoutes(
         email: data.email,
         passwordHash,
         securityWordHash,
-        role: (data.role || "user") as any,
+        role: "user",
       });
 
       const profile = await storage.createProfile({
@@ -62,7 +68,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/login", async (req, res) => {
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
     try {
       const data = loginSchema.parse(req.body);
       
@@ -115,7 +121,7 @@ export async function registerRoutes(
   });
 
   // SECURITY WORD + PASSWORD RESET
-  app.post("/api/auth/verify-security-word", async (req, res) => {
+  app.post("/api/auth/verify-security-word", authLimiter, async (req, res) => {
     try {
       const { email, securityWord } = req.body;
       if (!email || !securityWord) {
@@ -134,7 +140,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/auth/reset-password", async (req, res) => {
+  app.post("/api/auth/reset-password", authLimiter, async (req, res) => {
     try {
       const { email, securityWord, newPassword } = req.body;
       if (!email || !securityWord || !newPassword) {
@@ -267,24 +273,36 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
+      const checkinInput = z.object({
+        energyLevel: z.number().min(1).max(10),
+        sorenessLevel: z.number().min(1).max(10),
+        moodLevel: z.number().min(1).max(10),
+        stressLevel: z.number().min(1).max(10),
+        painNotes: z.string().optional(),
+        hasPainFlag: z.boolean().optional(),
+      }).parse(req.body);
+
       const today = format(new Date(), "yyyy-MM-dd");
       const checkin = await storage.createCheckin({
         teenProfileId: teenProfile.id,
         date: today,
-        ...req.body,
+        ...checkinInput,
       });
 
-      if (req.body.hasPainFlag) {
+      if (checkinInput.hasPainFlag) {
         await storage.createSafetyAlert({
           teenProfileId: teenProfile.id,
           alertType: "pain_flag",
           severity: "warning",
-          message: `Pain reported: ${req.body.painNotes || "No details provided"}`,
+          message: `Pain reported: ${checkinInput.painNotes || "No details provided"}`,
         });
       }
 
       res.json(checkin);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
       console.error("Checkin error:", error);
       res.status(500).json({ error: "Failed to save check-in" });
     }
@@ -315,12 +333,25 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
+      const sleepInput = z.object({
+        date: z.string(),
+        totalHours: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+        sleepQuality: z.number().min(1).max(10).optional(),
+        nightWakeups: z.number().optional(),
+        disturbances: z.array(z.string()).optional(),
+        source: z.enum(["manual", "apple_health", "other"]).optional(),
+        notes: z.string().optional(),
+      }).parse(req.body);
+
       const log = await storage.createSleepLog({
         teenProfileId: teenProfile.id,
-        ...req.body,
+        ...sleepInput,
       });
       res.json(log);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
       console.error("Sleep log error:", error);
       res.status(500).json({ error: "Failed to save sleep log" });
     }
@@ -351,12 +382,26 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
+      const workoutInput = z.object({
+        date: z.string(),
+        workoutType: z.enum(["sport_practice", "gym", "pt_rehab", "mobility", "cardio", "other"]),
+        sportName: z.string().optional(),
+        durationMinutes: z.number().min(1),
+        rpe: z.number().min(1).max(10).optional(),
+        exercises: z.any().optional(),
+        source: z.enum(["manual", "apple_health", "other"]).optional(),
+        notes: z.string().optional(),
+      }).parse(req.body);
+
       const log = await storage.createWorkoutLog({
         teenProfileId: teenProfile.id,
-        ...req.body,
+        ...workoutInput,
       });
       res.json(log);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
       console.error("Workout log error:", error);
       res.status(500).json({ error: "Failed to save workout log" });
     }
@@ -387,12 +432,26 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "User profile not found" });
 
+      const nutritionInput = z.object({
+        date: z.string(),
+        mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
+        calories: z.number().optional(),
+        proteinG: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+        carbsG: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+        fatG: z.union([z.string(), z.number()]).transform(v => String(v)).optional(),
+        source: z.enum(["manual", "apple_health", "other"]).optional(),
+        notes: z.string().optional(),
+      }).parse(req.body);
+
       const log = await storage.createNutritionLog({
         teenProfileId: teenProfile.id,
-        ...req.body,
+        ...nutritionInput,
       });
       res.json(log);
     } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: error.errors[0].message });
+      }
       console.error("Nutrition log error:", error);
       res.status(500).json({ error: "Failed to save nutrition log" });
     }
@@ -503,20 +562,7 @@ export async function registerRoutes(
     }
   });
 
-  // SAFETY ALERTS ROUTES
-  app.get("/api/safety-alerts", authMiddleware, async (req: AuthRequest, res) => {
-    try {
-      const profile = await storage.getProfile(req.user!.userId);
-      if (!profile) return res.json([]);
-      const teenProfile = await storage.getTeenProfile(profile.id);
-      if (!teenProfile) return res.json([]);
-
-      const alerts = await storage.getSafetyAlerts(teenProfile.id);
-      res.json(alerts);
-    } catch (error) {
-      res.status(500).json({ error: "Failed to get safety alerts" });
-    }
-  });
+  // SAFETY ALERTS ROUTES (first registration removed - duplicate was at line ~754 with proper role check)
 
   // HEALTH SYNC ROUTES (Apple HealthKit)
   app.post("/api/health-sync", authMiddleware, requireRole("user"), async (req: AuthRequest, res) => {
@@ -621,18 +667,18 @@ export async function registerRoutes(
       'Swimming': 'cardio',
       'Walking': 'cardio',
       'Hiking': 'cardio',
-      'Soccer': 'sport',
-      'Basketball': 'sport',
-      'Tennis': 'sport',
-      'Volleyball': 'sport',
-      'Baseball': 'sport',
-      'American Football': 'sport',
-      'Traditional Strength Training': 'strength',
-      'Functional Strength Training': 'strength',
-      'Yoga': 'flexibility',
+      'Soccer': 'sport_practice',
+      'Basketball': 'sport_practice',
+      'Tennis': 'sport_practice',
+      'Volleyball': 'sport_practice',
+      'Baseball': 'sport_practice',
+      'American Football': 'sport_practice',
+      'Traditional Strength Training': 'gym',
+      'Functional Strength Training': 'gym',
+      'Yoga': 'mobility',
       'Dance': 'cardio',
-      'Cross Training': 'hiit',
-      'Mixed Metabolic Cardio Training': 'hiit',
+      'Cross Training': 'cardio',
+      'Mixed Metabolic Cardio Training': 'cardio',
     };
     return mapping[hkType] || 'other';
   }
@@ -1109,10 +1155,14 @@ export async function registerRoutes(
     try {
       const { id } = req.params;
       const now = new Date();
+
+      const profile = await storage.getProfile(req.user!.userId);
+      if (!profile) return res.status(404).json({ error: "Profile not found" });
+      const teenProfile = await storage.getTeenProfile(profile.id);
+      if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
       
-      // Get the log to calculate duration
       const existingLogs = await storage.getBraceWearingLogsByRange(
-        "", 
+        teenProfile.id, 
         format(subDays(now, 1), "yyyy-MM-dd"),
         format(now, "yyyy-MM-dd")
       );
@@ -1120,6 +1170,10 @@ export async function registerRoutes(
       
       if (!log) {
         return res.status(404).json({ error: "Brace session not found" });
+      }
+
+      if (log.teenProfileId !== teenProfile.id) {
+        return res.status(403).json({ error: "Access denied" });
       }
 
       const startTime = new Date(log.startTime);
@@ -1281,7 +1335,7 @@ export async function registerRoutes(
       const teenProfile = await storage.getTeenProfile(profile.id);
       if (!teenProfile) return res.status(404).json({ error: "Teen profile not found" });
 
-      const updated = await storage.updateTeenProfile(teenProfile.id, { hasScoliosisSupport: true });
+      const updated = await storage.updateTeenProfile(profile.id, { hasScoliosisSupport: true });
       res.json(updated);
     } catch (error) {
       res.status(500).json({ error: "Failed to enable scoliosis support" });
@@ -1432,7 +1486,7 @@ export async function registerRoutes(
     }
   });
 
-  // EMAIL DATA EXPORT
+  // EMAIL DATA EXPORT (stub - email service not yet configured)
   app.post("/api/data-export/email", authMiddleware, async (req: AuthRequest, res) => {
     try {
       const { format: exportFormat } = req.body;
@@ -1445,9 +1499,10 @@ export async function registerRoutes(
 
       res.json({
         success: true,
-        message: `Data export in ${validFormat} format has been queued. You will receive it at ${user.email} shortly.`,
+        message: `Email export is not yet available. Please use GET /api/export-data?format=${validFormat} to download your data directly.`,
         format: validFormat,
         email: user.email,
+        stub: true,
       });
     } catch (error) {
       console.error("Error queueing email export:", error);
