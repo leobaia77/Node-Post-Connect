@@ -305,7 +305,16 @@ export async function registerRoutes(
           profileId: profile.id,
           goals: req.body.goals,
           goalWeights: req.body.goalWeights,
+          sports: req.body.sports,
+          weeklyAvailability: req.body.weeklyAvailability,
         });
+      } else {
+        const updateData: Record<string, unknown> = {};
+        if (req.body.goals !== undefined) updateData.goals = req.body.goals;
+        if (req.body.goalWeights !== undefined) updateData.goalWeights = req.body.goalWeights;
+        if (req.body.sports !== undefined) updateData.sports = req.body.sports;
+        if (req.body.weeklyAvailability !== undefined) updateData.weeklyAvailability = req.body.weeklyAvailability;
+        teenProfile = await storage.updateTeenProfile(profile.id, updateData) || teenProfile;
       }
       res.json(teenProfile);
     } catch (error) {
